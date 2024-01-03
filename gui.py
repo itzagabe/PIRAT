@@ -129,124 +129,45 @@ def radioButtonSettings():
 def checkboxMatrixSettings():
     checkLabel = Label(root, text = "Check one impact severity box for each category:")
     checkLabel.place(relx = 0.60, rely = 0.41)
+    create_categories()
 
-    catLabel1 = Label(root, text = "Damage to Property")
-    catLabel1.place(relx = 0.50, rely = 0.44)
-    c1 = Checkbutton(root, text='None',variable=var1, onvalue=1, offvalue=0, command=checkboxSelection)
-    c1.place(relx = 0.60, rely=0.44)
-    c2 = Checkbutton(root, text='Low',variable=var1, onvalue=2, offvalue=0, command=checkboxSelection)
-    c2.place(relx = 0.65, rely=0.44)
-    c3 = Checkbutton(root, text='Medium',variable=var1, onvalue=3, offvalue=0, command=checkboxSelection)
-    c3.place(relx = 0.70, rely=0.44)
-    c4 = Checkbutton(root, text='High',variable=var1, onvalue=4, offvalue=0, command=checkboxSelection)
-    c4.place(relx = 0.75, rely=0.44)
-    c5 = Checkbutton(root, text='Critical',variable=var1, onvalue=5, offvalue=0, command=checkboxSelection)
-    c5.place(relx = 0.80, rely=0.44)
+def create_categories():
+    
+    global cbVariableList
 
-    catLabel2 = Label(root, text = "Operational Loss (Internal)")
-    catLabel2.place(relx = 0.50, rely = 0.47)
-    c6 = Checkbutton(root, text='None',variable=var2, onvalue=1, offvalue=0, command=checkboxSelection)
-    c6.place(relx = 0.60, rely=0.47)
-    c7 = Checkbutton(root, text='Low',variable=var2, onvalue=2, offvalue=0, command=checkboxSelection)
-    c7.place(relx = 0.65, rely=0.47)
-    c8 = Checkbutton(root, text='Medium',variable=var2, onvalue=3, offvalue=0, command=checkboxSelection)
-    c8.place(relx = 0.70, rely=0.47)
-    c9 = Checkbutton(root, text='High',variable=var2, onvalue=4, offvalue=0, command=checkboxSelection)
-    c9.place(relx = 0.75, rely=0.47)
-    c10 = Checkbutton(root, text='Critical',variable=var2, onvalue=5, offvalue=0, command=checkboxSelection)
-    c10.place(relx = 0.80, rely=0.47)
+    checkboxList = [] #Stores the checkboxes
+    cbVariableList = [] #Stores the variables assigned to the checkboxes - IMPORTANT, THIS IS WHERE THE STUFF HAPPENS
+    
+    #Location of Values
+    defaultPosY = 0.44 
+    defaultPosX = 0.60
+    
+    categories = ['Damage to Property', "Loss of Productivity and Revenue", "Theft of Operational Information", "Compromise of Control", "Manipulation of Control",
+                  "Compromise of View", "Manipulation of View", "Loss of Safety", 'Loss of Availability', "Societal Loss", "Environmental Loss"]
+    cbvalue = [('None', 0), ('Low', 1), ('Medium', 1), ('High', 1), ('Critical', 1)]
 
-    catLabel3 = Label(root, text = "Operational Loss (External)")
-    catLabel3.place(relx = 0.50, rely = 0.50)
-    c11 = Checkbutton(root, text='None',variable=var3, onvalue=1, offvalue=0, command=checkboxSelection)
-    c11.place(relx = 0.60, rely=0.50)
-    c12 = Checkbutton(root, text='Low',variable=var3, onvalue=2, offvalue=0, command=checkboxSelection)
-    c12.place(relx = 0.65, rely=0.50)
-    c13 = Checkbutton(root, text='Medium',variable=var3, onvalue=3, offvalue=0, command=checkboxSelection)
-    c13.place(relx = 0.70, rely=0.50)
-    c14 = Checkbutton(root, text='High',variable=var3, onvalue=4, offvalue=0, command=checkboxSelection)
-    c14.place(relx = 0.75, rely=0.50)
-    c15 = Checkbutton(root, text='Critical',variable=var3, onvalue=5, offvalue=0, command=checkboxSelection)
-    c15.place(relx = 0.80, rely=0.50)
-
-    catLabel4 = Label(root, text = "Theft of Operational Info")
-    catLabel4.place(relx = 0.50, rely = 0.53)
-    c16 = Checkbutton(root, text='None',variable=var4, onvalue=1, offvalue=0, command=checkboxSelection)
-    c16.place(relx = 0.60, rely=0.53)
-    c17 = Checkbutton(root, text='Low',variable=var4, onvalue=2, offvalue=0, command=checkboxSelection)
-    c17.place(relx = 0.65, rely=0.53)
-    c18 = Checkbutton(root, text='Medium',variable=var4, onvalue=3, offvalue=0, command=checkboxSelection)
-    c18.place(relx = 0.70, rely=0.53)
-    c19 = Checkbutton(root, text='High',variable=var4, onvalue=4, offvalue=0, command=checkboxSelection)
-    c19.place(relx = 0.75, rely=0.53)
-    c20 = Checkbutton(root, text='Critical',variable=var4, onvalue=5, offvalue=0, command=checkboxSelection)
-    c20.place(relx = 0.80, rely=0.53)
-
-    catLabel5 = Label(root, text = "Loss of Control")
-    catLabel5.place(relx = 0.50, rely = 0.56)
-    c21 = Checkbutton(root, text='None',variable=var5, onvalue=1, offvalue=0, command=checkboxSelection)
-    c21.place(relx = 0.60, rely=0.56)
-    c22 = Checkbutton(root, text='Low',variable=var5, onvalue=2, offvalue=0, command=checkboxSelection)
-    c22.place(relx = 0.65, rely=0.56)
-    c23 = Checkbutton(root, text='Medium',variable=var5, onvalue=3, offvalue=0, command=checkboxSelection)
-    c23.place(relx = 0.70, rely=0.56)
-    c24 = Checkbutton(root, text='High',variable=var5, onvalue=4, offvalue=0, command=checkboxSelection)
-    c24.place(relx = 0.75, rely=0.56)
-    c25 = Checkbutton(root, text='Critical',variable=var5, onvalue=5, offvalue=0, command=checkboxSelection)
-    c25.place(relx = 0.80, rely=0.56)
-
-    catLabel6 = Label(root, text = "Loss of View")
-    catLabel6.place(relx = 0.50, rely = 0.59)
-    c26 = Checkbutton(root, text='None',variable=var6, onvalue=1, offvalue=0, command=checkboxSelection)
-    c26.place(relx = 0.60, rely=0.59)
-    c27 = Checkbutton(root, text='Low',variable=var6, onvalue=2, offvalue=0, command=checkboxSelection)
-    c27.place(relx = 0.65, rely=0.59)
-    c28 = Checkbutton(root, text='Medium',variable=var6, onvalue=3, offvalue=0, command=checkboxSelection)
-    c28.place(relx = 0.70, rely=0.59)
-    c29 = Checkbutton(root, text='High',variable=var6, onvalue=4, offvalue=0, command=checkboxSelection)
-    c29.place(relx = 0.75, rely=0.59)
-    c30 = Checkbutton(root, text='Critical',variable=var6, onvalue=5, offvalue=0, command=checkboxSelection)
-    c30.place(relx = 0.80, rely=0.59)
-
-    catLabel7 = Label(root, text = "Manipulation of Control")
-    catLabel7.place(relx = 0.50, rely = 0.62)
-    c31 = Checkbutton(root, text='None',variable=var7, onvalue=1, offvalue=0, command=checkboxSelection)
-    c31.place(relx = 0.60, rely=0.62)
-    c32 = Checkbutton(root, text='Low',variable=var7, onvalue=2, offvalue=0, command=checkboxSelection)
-    c32.place(relx = 0.65, rely=0.62)
-    c33 = Checkbutton(root, text='Medium',variable=var7, onvalue=3, offvalue=0, command=checkboxSelection)
-    c33.place(relx = 0.70, rely=0.62)
-    c34 = Checkbutton(root, text='High',variable=var7, onvalue=4, offvalue=0, command=checkboxSelection)
-    c34.place(relx = 0.75, rely=0.62)
-    c35 = Checkbutton(root, text='Critical',variable=var7, onvalue=5, offvalue=0, command=checkboxSelection)
-    c35.place(relx = 0.80, rely=0.62) 
-
-    catLabel8 = Label(root, text = "Manipulation of View")
-    catLabel8.place(relx = 0.50, rely = 0.65)
-    c36 = Checkbutton(root, text='None',variable=var8, onvalue=1, offvalue=0, command=checkboxSelection)
-    c36.place(relx = 0.60, rely=0.65)
-    c37 = Checkbutton(root, text='Low',variable=var8, onvalue=2, offvalue=0, command=checkboxSelection)
-    c37.place(relx = 0.65, rely=0.65)
-    c38 = Checkbutton(root, text='Medium',variable=var8, onvalue=3, offvalue=0, command=checkboxSelection)
-    c38.place(relx = 0.70, rely=0.65)
-    c39 = Checkbutton(root, text='High',variable=var8, onvalue=4, offvalue=0, command=checkboxSelection)
-    c39.place(relx = 0.75, rely=0.65)
-    c40 = Checkbutton(root, text='Critical',variable=var8, onvalue=5, offvalue=0, command=checkboxSelection)
-    c40.place(relx = 0.80, rely=0.65) 
+    for i, impactName in enumerate(categories):
+        cat = Label(root, text = impactName)
+        cat.place(relx = 0.50, rely = defaultPosY + (i * 0.03))
+        cbVar = IntVar()
+        for j, (severity, onvalue) in enumerate(cbvalue):
+            
+            checkbox = Checkbutton(root, text=severity, variable=cbVar, onvalue= j, offvalue=0, command=checkboxSelection)
+            checkbox.place(relx= defaultPosX + (j * 0.05), rely= defaultPosY + (i * 0.03))
+            checkboxList.append(checkbox)
+        
+        cbVariableList.append(cbVar)
 
 
 def checkboxSelection():
-    global cat1, cat2, cat3, cat4, cat5, cat6, cat7, cat8
-    global var1, var2, var3, var4, var5, var6, var7, var8
-    cat1 = var1.get()
-    cat2 = var2.get()
-    cat3 = var3.get()
-    cat4 = var4.get()
-    cat5 = var5.get()
-    cat6 = var6.get()
-    cat7 = var7.get()
-    cat8 = var8.get()
 
+    global updatedCategories
+    updatedCategories = [] #should probably initialize global variable somewhere else
+
+    updatedCategories.clear()
+
+    for var in cbVariableList:
+        updatedCategories.append(var.get())
 
 def verboseCheckboxSettings():
     cDesc = Checkbutton(root, text='Include CVE description',variable=varDesc, onvalue=3, offvalue=0)
