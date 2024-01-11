@@ -144,30 +144,36 @@ def create_categories():
     
     categories = ['Damage to Property', "Loss of Productivity and Revenue", "Theft of Operational Information", "Compromise of Control", "Manipulation of Control",
                   "Compromise of View", "Manipulation of View", "Loss of Safety", 'Loss of Availability', "Societal Loss", "Environmental Loss"]
-    cbvalue = [('None', 0), ('Low', 1), ('Medium', 1), ('High', 1), ('Critical', 1)]
+    cbvalue = [('None', 0), ('Low', 1), ('Medium', 2), ('High', 3), ('Critical', 4)]
 
     for i, impactName in enumerate(categories):
         cat = Label(root, text = impactName)
         cat.place(relx = 0.50, rely = defaultPosY + (i * 0.03))
         cbVar = IntVar()
-        for j, (severity, onvalue) in enumerate(cbvalue):
+        print("")
+        print(f'{impactName}: ' , end = " ")
+        for j, (severity, weight) in enumerate(cbvalue):
+            print(f'{severity} ({weight})', end = " ")
             
-            checkbox = Checkbutton(root, text=severity, variable=cbVar, onvalue= j, offvalue=0, command=checkboxSelection)
+            checkbox = Checkbutton(root, text=severity, variable=cbVar, onvalue= weight, offvalue=0, command=checkboxSelection)
             checkbox.place(relx= defaultPosX + (j * 0.05), rely= defaultPosY + (i * 0.03))
             checkboxList.append(checkbox)
         
+        #cbVar.set(0)
         cbVariableList.append(cbVar)
-
+    #checkboxSelection()
 
 def checkboxSelection():
-
-    global updatedCategories
-    updatedCategories = [] #should probably initialize global variable somewhere else
+    print("test")
+    
 
     updatedCategories.clear()
 
     for var in cbVariableList:
         updatedCategories.append(var.get())
+
+    for boop in updatedCategories:
+        print(boop, end = " ")
 
 def verboseCheckboxSettings():
     cDesc = Checkbutton(root, text='Include CVE description',variable=varDesc, onvalue=3, offvalue=0)
@@ -179,6 +185,9 @@ def buttonSettings():
 
 root = Tk()
 app = FullScreenApp(root)
+
+global updatedCategories
+updatedCategories = [] #should probably initialize global variable somewhere else
 firstClick = True
 selection = 1
 cat1 = 0
