@@ -157,7 +157,7 @@ def create_categories():
             
             checkbox = Checkbutton(root, text=severity, variable=cbVar, onvalue= weight, offvalue=0, command=checkboxSelection)
             checkbox.place(relx= defaultPosX + (j * 0.05), rely= defaultPosY + (i * 0.03))
-            checkboxList.append(checkbox)
+            #checkboxList.append(checkbox)
         
         #cbVar.set(0)
         cbVariableList.append(cbVar)
