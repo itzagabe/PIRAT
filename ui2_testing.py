@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
 from logic2 import *
+import threading
 
 def ImportFile():
     # Open a file dialog for file selection
@@ -39,9 +40,13 @@ def CreateMenuBar():
 
     root.config(menu=menuBar)
 
+calculationRunning = False
+
 def PerformCalc():
+    global calculationRunning
 
     if CheckForError(entryField, manufacturerVariable.get(), checkboxList):
+        calculationRunning = True
         risk = CalculateRisk(entryField.get(), industryVariable.get(), manufacturerVariable.get(), typeVariable.get(), cveDesc.get(), checkboxList)
         DisplayRisk(risk)
 
