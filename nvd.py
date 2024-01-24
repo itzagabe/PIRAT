@@ -21,9 +21,17 @@ from datetime import datetime, timedelta, date
 # Find a way to pretty print this data
 # Find a way to efficiently search for.
 
-def searchNVD(model):
+def searchNVDCPE(model):
+    print("searching")
+    #model = 'cpe:2.3:h:siemens:simatic_s7-1200:-:*:*:*:*:*:*:*'
     # find a way to securely store the key somewhere
-    cveList = nvdlib.searchCVE(keywordSearch=model)
+    cveList = nvdlib.searchCPE(keywordSearch= model)#, keywordExactMatch= True) #added exact match cpe:2.3:h:siemens:simatic_s7-1200:-:*:*:*:*:*:*:*
+    return cveList
+
+def searchNVD(cpe):
+    formatCPE = str(cpe)
+    # find a way to securely store the key somewhere
+    cveList = nvdlib.searchCVE(cpeName = formatCPE)#, keywordExactMatch= True) #added exact match
     return cveList
 
 def getDescriptionCVE(cveItem):

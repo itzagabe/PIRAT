@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from logic2 import *
 import threading
+from sharedvariables import calculationRunning
+import time
 
 def ImportFile():
     # Open a file dialog for file selection
@@ -16,7 +18,7 @@ def ImportFile():
 
 def FileSave():
     # Implementation for the save button
-    messagebox.showinfo("File Saved", "File saved")
+    tk.messagebox.showinfo("File Saved", "File saved")
     print("Save button clicked")
 
 def HelpPopup():
@@ -40,33 +42,56 @@ def CreateMenuBar():
 
     root.config(menu=menuBar)
 
-calculationRunning = False
+cooldownTime = 10000 #how often you can call the API
+cooldownActive = False
 
-def PerformCalc():
-    global calculationRunning
+def PerformCalcInit():
+    global cooldownActive
 
     if CheckForError(entryField, manufacturerVariable.get(), checkboxList):
-        calculationRunning = True
-        risk = CalculateRisk(entryField.get(), industryVariable.get(), manufacturerVariable.get(), typeVariable.get(), cveDesc.get(), checkboxList)
-        DisplayRisk(risk)
+        if cooldownActive: #if you called the API recently, enact a cooldown
+            return
 
+        calculateButton.config(state=tk.DISABLED)
+        cancelButton.config(state=tk.NORMAL)
+        calcThread = threading.Thread(target=PerformCalc)
+        calcThread.setDaemon(True) #allows you to close program if thread is active
+        calcThread.start()
+        calculationRunning.append([True, calcThread.ident])
+        root.after(cooldownTime, EnableButton) #enable the button after x amount of time
+        cooldownActive = True
 
-def DisplayRisk(riskVal):
-    win = tk.Toplevel()
-    win.wm_title("Risk evaluation")
-    win.geometry("850x500")
+def EnableButton():
+    global cooldownActive, calculateButton
+    if not calculationRunning[-1][0]: #if the cooldown is over and no calculation is running, enable the button
+        calculateButton.config(state=tk.NORMAL)
+    cooldownActive = False
 
-    # Create text widget and specify size.
-    outputBox = tk.Text(win)
-    outputBox.place(relx = 0, rely = 0, width = 850, height = 500)
-    # Scroll bar
-    bar = tk.Scrollbar(outputBox)
-    bar.pack(side = tk.RIGHT, fill = tk.Y)
+# def ShowCooldownMessage(seconds_left): #not used currently - add code to coolDownActive in performcalcinit if you want to dispaly text
+#     tk.messagebox.showinfo("Cooldown", f"Button on cooldown. {seconds_left} seconds left.")
+        
+def PerformCalc():
+    CalculateRisk(entryField.get(), industryVariable.get(), manufacturerVariable.get(), typeVariable.get(), cveDesc.get(), checkboxList)
+    #DisplayRisk(risk)
+    #calculationRunning.pop()
+    calculateButton.config(state=tk.NORMAL)
 
-    outputBox.config(font=('Courier New',18,'bold'), yscrollcommand = bar.set)
-    
-    # Insert output into textbox.
-    outputBox.insert(tk.END, riskVal)
+def UpdateCooldown(seconds_left):
+    if seconds_left > 0:
+        #ShowCooldownMessage(seconds_left)
+        root.after(1000, UpdateCooldown, seconds_left - 1)
+
+def CancelCalc():
+    calculationRunning[-1] = [False, calculationRunning[-1][1]]
+    if not cooldownActive: #if there is no cooldown, enable the calculate button again
+        calculateButton.config(state=tk.NORMAL)
+    cancelButton.config(state=tk.DISABLED)
+
+def onClosing():
+    if calculationRunning and calculationRunning[-1][0]: #only allow to close if no calcualtion is running
+        tk.messagebox.showinfo("Calculation in Progress", "Please wait for the calculation to complete before closing.")
+    else:
+        root.destroy()
 
 def CreateFrame():
     frame = tk.Frame(root, width=400, height=180, bd=1, relief=tk.SUNKEN)
@@ -193,13 +218,23 @@ def CreateCategories(frame):
         checkboxList.append(cbVar) 
 
 def CalculateButton(frame):
-    calculateButton = tk.Button(frame, text="Calculate risk", command=PerformCalc)#, command=performCalc
+    global calculateButton
+    global cancelButton
+
+    calculateButton = tk.Button(frame, text="Calculate risk", command=PerformCalcInit)#, command=performCalc
     calculateButton.grid(row=3, column=1, padx = 10, pady=5, sticky='w')
+    cancelButton = tk.Button(frame, text="Cancel", command=CancelCalc)
+    cancelButton.config(state=tk.DISABLED)
+    cancelButton.grid(row=3, column=2, padx=10, pady=5, sticky='w')
+
+# def test(frame):
+#     test1 = tk.Button(frame, text="test", command=test2)
+#     test1.grid(row=4, column=2, padx=10, pady=5, sticky='w')
+#     #print(f"{typeVariable.get()}, {cveDesc.get()}")  
+
+# def test2():
+#     print(calculationRunning)
     
-
-def test():
-    print(f"{typeVariable.get()}, {cveDesc.get()}")  
-
 def CreateTab1(notebook):
 
     padyValue = 3 # value used to pad the y axis, used to be more consistent
@@ -229,6 +264,7 @@ def CreateTab1(notebook):
     RadioButtonSettings(leftLeftFrame)
     VerboseCheckboxSettings(leftLeftFrame)
     CalculateButton(leftLeftFrame)
+    #test(leftLeftFrame)
 
     leftLeftFrame.pack(side=tk.LEFT, padx=10, pady=5, fill=tk.BOTH, expand=True, anchor='center')
     leftFrame.pack(side=tk.LEFT, padx=10, pady=5, fill=tk.BOTH, expand=True, anchor='center')
@@ -243,6 +279,38 @@ def CreateTab1(notebook):
 def CreateTab2(notebook):
     tab2 = ttk.Frame(notebook)
 
+    textTop = """How to use:
+    1. Please select a PLC manufacturer and the industry of your organization from the corresponding dropdown menus
+    2. Select the appropriate output type - 'Risk assessment only' is the default. If 'Verbose' selected, specify whether you want the CVE descriptions to be outputted
+    3. Enter the model of the PLC in the search bar - do not include the name of the manufacturer
+    4. Check the appropriate impact boxes based on the consequences as a result of a PLC attack"""
+    tab2Label = tk.Label(tab2, text=textTop, justify=tk.LEFT)
+    tab2Label.pack()
+    
+
+    # # Create frames for left and right sides with borders
+    # leftFrame = tk.Frame(tab2, bd=1, relief=tk.SUNKEN)
+    
+    # EntryBox(leftFrame).pack(pady = 10) #gets entry field
+
+    # leftLeftFrame = tk.Frame(leftFrame, bd=1)#, relief=tk.SUNKEN
+    # leftRightFrame = tk.Frame(leftFrame, bd=1, relief=tk.SUNKEN)
+
+    # # Left side UI elements
+    # IndustryDropdownSettings(leftLeftFrame)
+    # ManufacturerDropdownSettings(leftLeftFrame)
+
+    # RadioButtonSettings(leftLeftFrame)
+    # VerboseCheckboxSettings(leftLeftFrame)
+    # CalculateButton(leftLeftFrame)
+
+    # leftLeftFrame.pack(side=tk.LEFT, padx=10, pady=5, fill=tk.BOTH, expand=True, anchor='center')
+    # leftFrame.pack(side=tk.LEFT, padx=10, pady=5, fill=tk.BOTH, expand=True, anchor='center')
+
+    # # Right side UI elements
+    # rightFrame = tk.Frame(tab2, bd=1, relief=tk.SUNKEN)
+    # #CreateCategories(rightFrame)
+    # rightFrame.pack(side=tk.RIGHT, padx=10, pady=5, fill=tk.BOTH, expand=True, anchor='center')
     notebook.add(tab2, text="Group PLC Calculation")
 
 def CreateNotebook():
@@ -257,7 +325,7 @@ def main():
     CreateNotebook()
     # Lock window resizing
     root.resizable(False, False)
-
+    
     # Run the application
     root.mainloop()
 
@@ -267,5 +335,7 @@ root.title("PRIAT - Risk Assessment Tool")
 root.geometry("1280x720")
 root.resizable(False, False)
 
+
 if __name__ == "__main__":
+    root.protocol('WM_DELETE_WINDOW', onClosing)
     main()
