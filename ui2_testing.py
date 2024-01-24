@@ -48,10 +48,9 @@ cooldownActive = False
 def PerformCalcInit():
     global cooldownActive
 
-    if CheckForError(entryField, manufacturerVariable.get(), checkboxList):
+    if CheckForError(entryField, checkboxList):
         if cooldownActive: #if you called the API recently, enact a cooldown
             return
-
         calculateButton.config(state=tk.DISABLED)
         cancelButton.config(state=tk.NORMAL)
         calcThread = threading.Thread(target=PerformCalc)
@@ -71,7 +70,7 @@ def EnableButton():
 #     tk.messagebox.showinfo("Cooldown", f"Button on cooldown. {seconds_left} seconds left.")
         
 def PerformCalc():
-    CalculateRisk(entryField.get(), industryVariable.get(), manufacturerVariable.get(), typeVariable.get(), cveDesc.get(), checkboxList)
+    CalculateRisk(entryField.get(), industryVariable.get(), typeVariable.get(), cveDesc.get(), applyPatch.get(), checkboxList)
     #DisplayRisk(risk)
     #calculationRunning.pop()
     calculateButton.config(state=tk.NORMAL)
@@ -109,16 +108,20 @@ def CreateFrame():
 
     return frame
 
-def OnEntryClick(event):
-    event.widget.delete(0, tk.END)
+# def OnEntryClick(event):
+#     event.widget.delete(0, tk.END)
 
 def EntryBox(frame):
     global entryField
+    
+    entryLabel = tk.Label(frame, text="Enter the PLC model to analyze:")
+    entryLabel.pack()
     entryVar = tk.StringVar()
-    entryVar.set("Enter the PLC model to analyze:")
+    #entryVar.set("Enter the PLC model to analyze:")
     entryField = tk.Entry(frame, width=50, textvariable=entryVar)
-    entryField.bind("<Button-1>", OnEntryClick)
-    return entryField
+    entryField.pack()
+    # entryField.bind("<Button-1>", OnEntryClick)
+    # return entryField
 
 
 def IndustryDropdownSettings(frame):
@@ -178,13 +181,22 @@ def RadioButtonSettings(frame):
 
     return R1, R2
 
+def AppplyPatchCheckbox(frame):
+    global applyPatch
+    global applyCheckbox
+
+    applyPatch = tk.IntVar()
+    applyCheckbox = tk. Checkbutton(frame, text='Apply CVE patches', variable=applyPatch, onvalue=2, offvalue=0)
+    applyCheckbox.grid(row=1, column=2, padx = 10, pady=5, sticky='w')
+    #applyCheckbox.config(state=tk.DISABLED)
+
 def VerboseCheckboxSettings(frame):
     global cveDesc
     global verboseGUI
 
     cveDesc = tk.IntVar()
     verboseGUI = tk. Checkbutton(frame, text='Include CVE description',variable=cveDesc, onvalue=2, offvalue=0)
-    verboseGUI.grid(row=2, column=3, padx = 10, pady=5, sticky='w')
+    verboseGUI.grid(row=2, column=2, padx = 10, pady=5, sticky='w')
     verboseGUI.config(state=tk.DISABLED)
 
 def StateVerbose():
@@ -252,17 +264,18 @@ def CreateTab1(notebook):
     # Create frames for left and right sides with borders
     leftFrame = tk.Frame(tab1, bd=1, relief=tk.SUNKEN)
     
-    EntryBox(leftFrame).pack(pady = 10) #gets entry field
+    EntryBox(leftFrame)#.pack(pady = 10) #gets entry field
 
     leftLeftFrame = tk.Frame(leftFrame, bd=1)#, relief=tk.SUNKEN
     leftRightFrame = tk.Frame(leftFrame, bd=1, relief=tk.SUNKEN)
 
     # Left side UI elements
     IndustryDropdownSettings(leftLeftFrame)
-    ManufacturerDropdownSettings(leftLeftFrame)
+    #ManufacturerDropdownSettings(leftLeftFrame)
 
     RadioButtonSettings(leftLeftFrame)
     VerboseCheckboxSettings(leftLeftFrame)
+    AppplyPatchCheckbox(leftLeftFrame)
     CalculateButton(leftLeftFrame)
     #test(leftLeftFrame)
 
@@ -331,10 +344,9 @@ def main():
 
 # Create the main window
 root = tk.Tk()
-root.title("PRIAT - Risk Assessment Tool")
+root.title("PIRAT - Risk Assessment Tool")
 root.geometry("1280x720")
 root.resizable(False, False)
-
 
 if __name__ == "__main__":
     root.protocol('WM_DELETE_WINDOW', onClosing)

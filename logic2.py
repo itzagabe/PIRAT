@@ -5,7 +5,7 @@ import re
 from sharedvariables import calculationRunning
 import threading
 
-def CalculateRisk(entryField, industryDropdown, manufacturerDropdown, typeVariable, cveDesc, categoryList):
+def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, categoryList):
         global calculationRunning
 
         currentID = threading.current_thread().ident
@@ -20,7 +20,7 @@ def CalculateRisk(entryField, industryDropdown, manufacturerDropdown, typeVariab
 
         # use entry field as an argument for search
 
-        searchTermList = getSearchTermList(entryField, manufacturerDropdown)
+        #searchTermList = getSearchTermList(entryField, manufacturerDropdown)
         resultTuple = searchPLCInfoNVD(entryField)
         damageToProperty = getImpactMultiplier(categoryList[0])
         internalOpLoss = getImpactMultiplier(categoryList[1])
@@ -38,7 +38,8 @@ def CalculateRisk(entryField, industryDropdown, manufacturerDropdown, typeVariab
         errorNoCVE(cveList)  # check whether the cveList is empty - useless to continue if not
         
         if CheckStatus(calculationRunning, currentID): #if the thread was cancelled, don't do this
-            RemovePatchedCVEs(cveList)
+            if applyPatch:
+                RemovePatchedCVEs(cveList)
             #print(f'cve {calculationRunning}')
             # If verbose, generate verbose output
             if typeVariable == 2:
@@ -234,16 +235,12 @@ def generateVerboseOutput(cveList, actorsList, description):
     return verbose
 
 
-def CheckForError(entryField, manufacturerDropdownVal, categoryList):
+def CheckForError(entryField, categoryList):
     noError = True
     # if the manufacturer is Other and the field is empty we have nothing to search for
-    if entryField.get() == "" and manufacturerDropdownVal == "Other":
+    if entryField.get() == "":
         # pop up
         tk.messagebox.showerror("The PLC search field is empty!", "Unfortunately, we're not mind readers! Please input a PLC family in the search bar.")
-        noError = False
-    elif manufacturerDropdownVal == "Select PLC Manufacturer:":
-        # pop up
-        tk.messagebox.showerror("PLC manufacturer not selected!", "Please select a PLC manufacturer")
         noError = False
     else:
         for cat in categoryList:
