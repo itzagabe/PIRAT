@@ -1,9 +1,9 @@
 import tkinter as tk
 
 selected_values = {
-    "Exploit Code Maturity": 'E:X',
-    "Remediation Level": 'RL:X',
-    "Report Confidence": 'RC:X'
+    "Exploit Code Maturity": 'X',
+    "Remediation Level": 'X',
+    "Report Confidence": 'X'
 }
 
 def map_selected_option(selected_dropdown, selected_option):
@@ -35,10 +35,10 @@ def map_selected_option(selected_dropdown, selected_option):
 def select_and_close_window():
     popup.destroy()  # Close the popup window when the "Select" button is clicked
 
-def create_popup(root, selected_values):
+def create_popup(name):
     global popup
-    popup = tk.Toplevel(root)
-    popup.title("Dropdown Selection")
+    popup = tk.Toplevel()
+    popup.title(name)
 
     dropdown_options = {
         "Exploit Code Maturity": ["Not Defined", "Unproven that exploit exists", "Proof of concept code", "Functional exploit exists", "High"],
@@ -62,8 +62,8 @@ def create_popup(root, selected_values):
     select_button.pack(pady=10)
     popup.wait_window()
 
-def GetModifiedCVSS(root):
-    create_popup(root, selected_values)
+def GetModifiedCVSS(name):
+    create_popup(name)
     E = 'E:' + str(selected_values['Exploit Code Maturity'])
     RL = 'RL:' + str(selected_values['Remediation Level']) 
     RC = "RC:" + str(selected_values['Report Confidence']) 

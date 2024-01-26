@@ -1,9 +1,9 @@
 import tkinter as tk
 
 selected_values = {
-    "Exploit Code Maturity": 'E:X',
-    "Remediation Level": 'RL:X',
-    "Report Confidence": 'RC:X'
+    "Exploit Code Maturity": 'X',
+    "Remediation Level": 'X',
+    "Report Confidence": 'X'
 }
 
 def map_selected_option(selected_dropdown, selected_option):
@@ -35,9 +35,9 @@ def map_selected_option(selected_dropdown, selected_option):
 def select_and_close_window():
     popup.destroy()  # Close the popup window when the "Select" button is clicked
 
-def create_popup(root, selected_values):
+def create_popup():
     global popup
-    popup = tk.Toplevel(root)
+    popup = tk.Toplevel()
     popup.title("Dropdown Selection")
 
     dropdown_options = {
@@ -62,8 +62,8 @@ def create_popup(root, selected_values):
     select_button.pack(pady=10)
     popup.wait_window()
 
-def get_E_RL_RC(root):
-    create_popup(root, selected_values)
+def get_E_RL_RC():
+    create_popup()
     E = 'E:' + str(selected_values['Exploit Code Maturity'])
     RL = 'RL:' + str(selected_values['Remediation Level']) 
     RC = "RC:" + str(selected_values['Report Confidence']) 

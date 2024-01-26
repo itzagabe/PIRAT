@@ -5,7 +5,8 @@ from cvsslib import cvss2, cvss31, calculate_vector
 from cvsstesting import get_E_RL_RC
 import tkinter as tk
 
-#a = nvdlib.searchCVE(cveId = 'CVE-2017-12741')
+a = nvdlib.searchCVE(cveId = 'CVE-2012-3037')
+print(a[0])
 r = [['V30', 7.5, 'HIGH'], 'CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H'], [['V31', 6.8, 'MEDIUM'], 'CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H']
 #b = nvdlib.searchCVE(cveId = 'CVE-2019-13945')
 #b = [['V31', 6.8, 'MEDIUM'], 'CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H']
@@ -16,13 +17,16 @@ totalImpact = 0
 
 def button_click():
   for eachCVE in r:
+   print(eachCVE[0][0])
+   #if eachCVE[0][0] == 'V31' or eachCVE[0][0] == 'v30':
    #a = (getCVSS(eachCVE))
    #print(eachCVE[1])
    # a1 = str(a[1])
-   b = get_E_RL_RC(root)
-   final = '/' + '/'.join(b)
-   d = eachCVE[1] + final
-   print(calculate_vector(d, cvss31))
+   impactScore = get_E_RL_RC()
+   impactScore = '/' + '/'.join(impactScore)
+   impactScore = eachCVE[1] + impactScore
+   impactScore = calculate_vector(impactScore, cvss31)[2]
+   print(impactScore)
    #c = str(eachCVE[1]) + str(b
   #print(c)
 

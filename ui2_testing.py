@@ -44,10 +44,12 @@ def HelpPopup():
         'Risk assessment only' will provide a high level summarry of the risk analysis
         'Verbose' will also include a list of all associated CVEs - this selection also provides the option to enable CVE descriptions in the output
     3. Choose whether or not you want to modify the CVEs listed on a device - use this if specific CVEs have been patched
-    4. Assign severities for each of the impact categories.
-    5. Press 'Calculate Risk' once you are ready to calculate.
+    4. Choose whether or not you want to modify the CVSS base score of each CVE
+    5. Assign severities for each of the impact categories.
+    6. Press 'Calculate Risk' once you are ready to calculate.
         If more than once device is found with the supplied name, a pop-up will appear. Select the specific device you require.
-        If 'Apply CVE patches' has been selected, a pop-up will appear. Choose the CVEs you do not want included in the calculation."""
+        If 'Apply CVE patches' has been selected, a pop-up will appear. Choose the CVEs you do not want included in the calculation.
+        If 'Modify Base CVSS has been selected, a pop-up will appear. Choose the values which best suit your environement to modify the base score."""
     labelTab1 = tk.Label(tab1, text=textTab1, justify=tk.LEFT)
     labelTab1.pack(padx=10, pady=10)
 
@@ -101,7 +103,7 @@ def EnableButton():
 #     tk.messagebox.showinfo("Cooldown", f"Button on cooldown. {seconds_left} seconds left.")
         
 def PerformCalc():
-    CalculateRisk(entryField.get(), industryVariable.get(), typeVariable.get(), cveDesc.get(), applyPatch.get(), checkboxList)
+    CalculateRisk(entryField.get(), industryVariable.get(), typeVariable.get(), cveDesc.get(), applyPatch.get(), modifyBaseCVSS.get(), checkboxList)
     #DisplayRisk(risk)
     #calculationRunning.pop()
     calculateButton.config(state=tk.NORMAL)
@@ -222,6 +224,15 @@ def AppplyPatchCheckbox(frame):
     applyCheckbox.grid(row=1, column=2, padx = 10, pady=5, sticky='w')
     #applyCheckbox.config(state=tk.DISABLED)
 
+def ModifyBaseCVSS(frame):
+    global modifyBaseCVSS
+    global modifyBaseCheckbox
+
+    modifyBaseCVSS = tk.IntVar()
+    modifyBaseCheckbox = tk. Checkbutton(frame, text='Modify Base CVSS', variable=modifyBaseCVSS, onvalue=2, offvalue=0)
+    modifyBaseCheckbox.grid(row=3, column=2, padx = 10, pady=5, sticky='w')
+    #applyCheckbox.config(state=tk.DISABLED)
+
 def VerboseCheckboxSettings(frame):
     global cveDesc
     global verboseGUI
@@ -266,10 +277,10 @@ def CalculateButton(frame):
     global cancelButton
 
     calculateButton = tk.Button(frame, text="Calculate risk", command=PerformCalcInit)#, command=performCalc
-    calculateButton.grid(row=3, column=1, padx = 10, pady=5, sticky='w')
+    calculateButton.grid(row=4, column=1, padx = 10, pady=5, sticky='w')
     cancelButton = tk.Button(frame, text="Cancel", command=CancelCalc)
     cancelButton.config(state=tk.DISABLED)
-    cancelButton.grid(row=3, column=2, padx=10, pady=5, sticky='w')
+    cancelButton.grid(row=4, column=2, padx=10, pady=5, sticky='w')
 
 # def test(frame):
 #     test1 = tk.Button(frame, text="test", command=test2)
@@ -313,6 +324,7 @@ def CreateTab1(notebook):
     RadioButtonSettings(leftLeftFrame)
     VerboseCheckboxSettings(leftLeftFrame)
     AppplyPatchCheckbox(leftLeftFrame)
+    ModifyBaseCVSS(leftLeftFrame)
     CalculateButton(leftLeftFrame)
     #test(leftLeftFrame)
 

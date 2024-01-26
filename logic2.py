@@ -7,7 +7,7 @@ import threading
 from cvsslib import cvss2, cvss31, calculate_vector
 from cvss import GetModifiedCVSS
 
-def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, categoryList):
+def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, modifyBaseCVSS, categoryList):
         global calculationRunning
 
         currentID = threading.current_thread().ident
@@ -33,9 +33,10 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
         errorNoCVE(cveList)  # check whether the cveList is empty - useless to continue if not
         
         if CheckStatus(calculationRunning, currentID): #if the thread was cancelled, don't do this
+            # if apply patches checkmark - popup
             if applyPatch:
                 RemovePatchedCVEs(cveList)
-                
+
             # If verbose, generate verbose output
             if typeVariable == 2:
                 if cveDesc == 2:
@@ -56,10 +57,22 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
                     # skip this CVE
                     continue
                 else:
-                    multiplier = getMultiplierCVE(eachCVE)
-                    totalImpact += getCVSS(eachCVE)[0][1] * multiplier
+                    cveCVSS = getCVSS(eachCVE)
+                    cveImpact = 0
+                    if not cveCVSS[0][0] == 'V2' and modifyBaseCVSS:
+                        impactScore = GetModifiedCVSS(eachCVE.id)
+                        impactScore = '/' + '/'.join(impactScore)
+                        impactScore = cveCVSS[1] + impactScore
+                        impactScore = calculate_vector(impactScore, cvss31)[2]
+                        #print(f'CVSS 3, {impactScore}')
+                    else:
+                        impactScore = getCVSS(eachCVE)[0][1]
+                        #print(f'CVSS 2, {impactScore}')
 
-            formulaRes = 5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
+                    multiplier = getMultiplierCVE(eachCVE)
+                    totalImpact += impactScore * multiplier
+
+            formulaRes = impactCat + totalImpact#5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
             #formulaRes = ((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4 * actorsScore * impactCat) / 3
 
             totalRiskOutput = outputRiskInfo(industryDropdown, actorsList, totalImpact, 
@@ -124,7 +137,7 @@ def RemovePatchedCVEs(cveList):
     checkboxes = []
     for cve in reversed(cveList):
         var = tk.BooleanVar()
-        checkbox = tk.Checkbutton(checkboxInnerFrame, text=getCVE(cve), variable=var)
+        checkbox = tk.Checkbutton(checkboxInnerFrame, text=cve.id, variable=var)
         checkbox.pack(anchor=tk.W)
         checkboxes.append((cve, var))
 
@@ -215,7 +228,7 @@ def generateVerboseOutput(cveList, actorsList, description):
             # skip this CVE
             continue           
         else:
-            verbose += getCVE(eachCVE) + "\n\n"
+            verbose += eachCVE.id + "\n\n"
             if description == True:
                 verbose += "Description:\n" + getDescriptionCVE(eachCVE) + "\n\n"
             verbose += "Base Score: " + str(getBaseScoreCVE(eachCVE)) + "\n"
