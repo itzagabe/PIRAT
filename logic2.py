@@ -4,6 +4,8 @@ from mitre import *
 import re
 from sharedvariables import calculationRunning
 import threading
+from cvsslib import cvss2, cvss31, calculate_vector
+from cvss import GetModifiedCVSS
 
 def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, categoryList):
         global calculationRunning
@@ -18,18 +20,11 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
         multiplier = 0
         attack = Attck()
 
-        # use entry field as an argument for search
-
-        #searchTermList = getSearchTermList(entryField, manufacturerDropdown)
         resultTuple = searchPLCInfoNVD(entryField)
-        damageToProperty = getImpactMultiplier(categoryList[0])
-        internalOpLoss = getImpactMultiplier(categoryList[1])
-        externalOpLoss = getImpactMultiplier(categoryList[2])
-        opInfoTheft = getImpactMultiplier(categoryList[3])
-        controlLoss = getImpactMultiplier(categoryList[4])
-        viewLoss = getImpactMultiplier(categoryList[5])
-        controlManipulation = getImpactMultiplier(categoryList[6])
-        viewManipulation = getImpactMultiplier(categoryList[7])
+        if resultTuple[0] is None: #if no results are found, give error
+            StopCalculation(currentID)
+            return 
+        
         cveList = resultTuple[0]
         searchIndex = resultTuple[1]
         actorsList = getListOfActorsForIndustry(industryDropdown)
@@ -40,7 +35,7 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
         if CheckStatus(calculationRunning, currentID): #if the thread was cancelled, don't do this
             if applyPatch:
                 RemovePatchedCVEs(cveList)
-            #print(f'cve {calculationRunning}')
+                
             # If verbose, generate verbose output
             if typeVariable == 2:
                 if cveDesc == 2:
@@ -50,14 +45,10 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
                 
 
             cvssScore = 0.0
-            availabilityEff = 0.0
-            confidentialityEff = 0.0
-            integrityEff = 0.0
-            exploitabilityScore = 0.0
-            impactScore = 0.0
+            totalImpact = 0
             numberVuln = len(cveList)
             actorsScore = getActorNumberRiskScore(actorsList)
-            impactCat = damageToProperty * internalOpLoss * externalOpLoss * opInfoTheft * controlLoss * viewLoss * controlManipulation * viewManipulation
+            impactCat = GetImpact(categoryList) #this is the mitre impact calculation
 
             for eachCVE in reversed(cveList):
                 if getBaseScoreCVE(eachCVE) == -1:
@@ -66,30 +57,35 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
                     continue
                 else:
                     multiplier = getMultiplierCVE(eachCVE)
-                    #cvssScore += float(getBaseScoreCVE(eachCVE))
-                    #availabilityEff += getImpactConversion(getAvailabilityImpactCVE(eachCVE))  * multiplier
-                    integrityEff += getImpactConversion(getIntegrityImpactCVE(eachCVE)) * multiplier
-                    confidentialityEff += getImpactConversion(getConfidentialityImpactCVE(eachCVE)) * multiplier
-                    exploitabilityScore += getExploitabilityScoreCVE(eachCVE) * multiplier
-                    impactScore += getImpactScoreCVE(eachCVE) * multiplier
+                    totalImpact += getCVSS(eachCVE)[0][1] * multiplier
 
-            # actorsScore += getActorScore(len(actorsList))
+            formulaRes = 5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
+            #formulaRes = ((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4 * actorsScore * impactCat) / 3
 
-
-            #cvssScore /= numberVuln
-            #availabilityEff /= numberVuln
-            integrityEff /= numberVuln
-            confidentialityEff /= numberVuln
-            exploitabilityScore /= numberVuln
-            impactScore /= numberVuln
-
-            formulaRes = ((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4 * actorsScore * impactCat) / 3
-
-            totalRiskOutput = outputRiskInfo(industryDropdown, actorsList, exploitabilityScore, confidentialityEff, integrityEff, impactScore, 
-                                             formulaRes, numberVuln, cpeOfficialName, typeVariable, verbose)
+            totalRiskOutput = outputRiskInfo(industryDropdown, actorsList, totalImpact, 
+                                             formulaRes, numberVuln, cpeOfficialName, impactCat, typeVariable, verbose)
             DisplayRisk(totalRiskOutput)
+        
+        StopCalculation(currentID) #clear thread once error
 
-        for tuple_entry in calculationRunning: #removes thread from calculationRunning
+def GetImpact(checkboxList):
+    global impactTotal
+
+    impactTotal = 0 #default impact - nothing
+
+    for impact in checkboxList:
+        impactTotal += getImpactMultiplier(impact.get())
+    
+    if impactTotal:
+        impactTotal /= len(checkboxList)
+
+    
+
+    return impactTotal        
+
+def StopCalculation(currentID):
+    print(f"Thread {currentID} aborted/completed")
+    for tuple_entry in calculationRunning: #removes thread from calculationRunning
             if tuple_entry[1] == currentID:
                 calculationRunning.remove(tuple_entry)
                 break
@@ -166,17 +162,15 @@ def DisplayRisk(riskVal):
     # Insert output into textbox.
     outputBox.insert(tk.END, riskVal)
 
-def outputRiskInfo(industryDropdown, actorsList, exploitabilityScore, confidentialityEff, integrityEff, impactScore, formulaRes, numberVuln, cpeOfficialName, selection, verbose):
+def outputRiskInfo(industryDropdown, actorsList, totalImpact, formulaRes, numberVuln, cpeOfficialName, impactCat, selection, verbose):
 
     output = "The number of vulnerabilities for this PLC family is:\n"
     output += str(numberVuln) + "\n"
     output += "The risk score for this PLC family is:\n"
     output += str(round(formulaRes, 2)) + "\n"
     output += "The risk subscores for this PLC family are:\n"
-    output += "Exploitability Score: " + str(round(exploitabilityScore, 2)) + "\n"
-    output += "Confidentiality Score: " + str(round(confidentialityEff, 2)) + "\n"
-    output += "Integrity Score: " + str(round(integrityEff, 2)) + "\n"
-    output += "Impact Score: " + str(round(impactScore, 2)) + "\n"
+    output += "CVSS Score: " + str(round(totalImpact, 2)) + "\n"
+    output += "MITRE Impact Risk Score: " + str(round(impactCat, 2)) + "\n"
     if formulaRes > 8:
         output += "Your device is at critical risk!\n"
         output += "Check vendor website for latest patches/guidance.\n"
@@ -260,10 +254,18 @@ def searchPLCInfoNVD(searchTermList):
     cveList = []
     indexOfList = 0
     cpeList = searchNVDCPE(searchTermList)
+    if cpeList is None:
+        tk.messagebox.showerror("Error", "An error has occurred - please be more specific with your search")
+        #print("An error has occurred - no CPEs were found")
+        return None, None
     cpeName = chooseWhichCPE(cpeList)
     if cpeName:
         cpeOfficialName = cpeName.cpeName #THIS IS TEMP
         cveList = searchNVD(cpeName.cpeName)
+    else:
+        #print('An error has occured - a CPE was not selected')
+        tk.messagebox.showerror("Error", 'An error has occured - a CPE was not selected')
+        return None, None
     # for cpe in cveList:
     #     print(cpe.cpeName)
     # for searchTerm in searchTermList:
@@ -331,15 +333,15 @@ def getSearchTermList(entryField, manufacturerDropdown):
     return searchTermList
 
 def getImpactMultiplier(category):
-    multiplier = 1
-    if category == 5:
-        multiplier = 1
-    elif category == 4:
-        multiplier = 0.95
+    if category == 4:
+        return 8
     elif category == 3:
-        multiplier = 0.9
+        return 5
     elif category == 2:
-        multiplier = 0.85
+        return 2.5
     elif category == 1:
-        multiplier = 0.8
-    return multiplier
+        return 1
+    elif category == 0:
+        return 0
+    else:
+        return 0

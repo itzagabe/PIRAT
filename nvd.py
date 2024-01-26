@@ -25,7 +25,13 @@ def searchNVDCPE(model):
     print("searching")
     #model = 'cpe:2.3:h:siemens:simatic_s7-1200:-:*:*:*:*:*:*:*'
     # find a way to securely store the key somewhere
-    cveList = nvdlib.searchCPE(keywordSearch= model)#, keywordExactMatch= True) #added exact match cpe:2.3:h:siemens:simatic_s7-1200:-:*:*:*:*:*:*:*
+    try:
+        cveList = nvdlib.searchCPE(keywordSearch=model)#, keywordExactMatch=True)
+        # Process the results here
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+        # Handle the error in a way that makes sense for your application #added exact match cpe:2.3:h:siemens:simatic_s7-1200:-:*:*:*:*:*:*:*
     return cveList
 
 def searchNVD(cpe):
@@ -48,48 +54,75 @@ def getBaseScoreCVE(cveItem):
 
 def getAvailabilityImpactCVE(cveItem):
     try:
-        return cveItem.metrics.cvssMetricV31[0].cvssData.availabilityImpact
+        return cveItem.metrics.cvssMetricV31[0].availabilityImpact
     except AttributeError:
         try:
-            return cveItem.metrics.cvssMetricV2[0].cvssData.availabilityImpact
+            return cveItem.metrics.cvssMetricV30[0].availabilityImpact
         except AttributeError:
-            return 0
+            try:
+               return cveItem.metrics.cvssMetricV2[0].availabilityImpact
+            except AttributeError:
+               return 0
         
 def getConfidentialityImpactCVE(cveItem):
     try:
-        return cveItem.metrics.cvssMetricV31[0].cvssData.confidentialityImpact
+        return cveItem.metrics.cvssMetricV31[0].confidentialityImpact
     except AttributeError:
         try:
-            return cveItem.metrics.cvssMetricV2[0].cvssData.confidentialityImpact
+            return cveItem.metrics.cvssMetricV30[0].confidentialityImpact
         except AttributeError:
-            return 0
+            try:
+               return cveItem.metrics.cvssMetricV2[0].confidentialityImpact
+            except AttributeError:
+               return 0
         
 def getIntegrityImpactCVE(cveItem):
     try:
-        return cveItem.metrics.cvssMetricV31[0].cvssData.integrityImpact
+        return cveItem.metrics.cvssMetricV31[0].integrityImpact
     except AttributeError:
         try:
-            return cveItem.metrics.cvssMetricV2[0].cvssData.integrityImpact
+            return cveItem.metrics.cvssMetricV30[0].integrityImpact
         except AttributeError:
-            return 0
+            try:
+               return cveItem.metrics.cvssMetricV2[0].integrityImpact
+            except AttributeError:
+               return 0
         
 def getImpactScoreCVE(cveItem):
     try:
         return cveItem.metrics.cvssMetricV31[0].impactScore
     except AttributeError:
         try:
-            return cveItem.metrics.cvssMetricV2[0].impactScore
+            return cveItem.metrics.cvssMetricV30[0].impactScore
         except AttributeError:
-            return 0
+            try:
+               return cveItem.metrics.cvssMetricV2[0].impactScore
+            except AttributeError:
+               return 0
 
 def getExploitabilityScoreCVE(cveItem):
     try:
         return cveItem.metrics.cvssMetricV31[0].exploitabilityScore
     except AttributeError:
         try:
-            return cveItem.metrics.cvssMetricV2[0].exploitabilityScore
+            return cveItem.metrics.cvssMetricV30[0].exploitabilityScore
         except AttributeError:
-            return 0
+            try:
+               return cveItem.metrics.cvssMetricV2[0].exploitabilityScore
+            except AttributeError:
+               return 0
+            
+def getCVSS(cveItem):
+    try:
+        return cveItem.score, cveItem.v31vector
+    except AttributeError:
+        try:
+            return cveItem.score, cveItem.v30vector 
+        except AttributeError:
+            try:
+               return cveItem.score, cveItem.v2vector  
+            except AttributeError:
+               return 0
 
 def getImpactConversion(cveWord):
     result = 0

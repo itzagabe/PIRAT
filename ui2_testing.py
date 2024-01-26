@@ -23,10 +23,38 @@ def FileSave():
 
 def HelpPopup():
     # Implementation for the help button popup
+     
     popup = tk.Toplevel(root)
-    popup.title("Under construction")
-    label = tk.Label(popup, text="Under construction")
-    label.pack(padx=10, pady=10)
+    popup.title("How To Use")
+
+    intro = "Here is how you use PIRAT. Depending on whether you are calculating devices individually or in groups, the process will change."
+    introLabel = tk.Label(popup, text=intro, justify=tk.LEFT)
+    introLabel.pack(padx=10, pady=10)
+    #create notebook
+    notebook = ttk.Notebook(popup)
+    tab1 = tk.Frame(notebook)
+    notebook.add(tab1, text="Individual")
+    tab2 = tk.Frame(notebook)
+    notebook.add(tab2, text="Group")
+    notebook.pack(padx=10, fill='both', expand=True)
+
+    textTab1 = """How to use:
+    1. In the entry box, type in the name of the device you would like to analyse. The more specific you are, the easier it will be to find the appropriate device.
+    2. Select the appropriate output type:
+        'Risk assessment only' will provide a high level summarry of the risk analysis
+        'Verbose' will also include a list of all associated CVEs - this selection also provides the option to enable CVE descriptions in the output
+    3. Choose whether or not you want to modify the CVEs listed on a device - use this if specific CVEs have been patched
+    4. Assign severities for each of the impact categories.
+    5. Press 'Calculate Risk' once you are ready to calculate.
+        If more than once device is found with the supplied name, a pop-up will appear. Select the specific device you require.
+        If 'Apply CVE patches' has been selected, a pop-up will appear. Choose the CVEs you do not want included in the calculation."""
+    labelTab1 = tk.Label(tab1, text=textTab1, justify=tk.LEFT)
+    labelTab1.pack(padx=10, pady=10)
+
+    textTab2 = """This will be used for the second tab."""
+    labelTab2 = tk.Label(tab2, text=textTab2, justify=tk.LEFT)
+    labelTab2.pack(padx=10, pady=10)
+
 
 def CreateMenuBar():
     menuBar = tk.Menu(root)
@@ -38,7 +66,7 @@ def CreateMenuBar():
     menuBar.add_cascade(label="File", menu=fileMenu)
 
     # Help Button
-    menuBar.add_command(label="Help", command=HelpPopup)
+    menuBar.add_command(label="How To Use", command=HelpPopup)
 
     root.config(menu=menuBar)
 
@@ -47,7 +75,9 @@ cooldownActive = False
 
 def PerformCalcInit():
     global cooldownActive
-
+    # print('hi')
+    # tempImpact(checkboxList)
+    # return
     if CheckForError(entryField, checkboxList):
         if cooldownActive: #if you called the API recently, enact a cooldown
             return
@@ -62,7 +92,8 @@ def PerformCalcInit():
 
 def EnableButton():
     global cooldownActive, calculateButton
-    if not calculationRunning[-1][0]: #if the cooldown is over and no calculation is running, enable the button
+    
+    if calculationRunning and not calculationRunning[-1][0]: #if the cooldown is over and no calculation is running, enable the button
         calculateButton.config(state=tk.NORMAL)
     cooldownActive = False
 
@@ -81,7 +112,8 @@ def UpdateCooldown(seconds_left):
         root.after(1000, UpdateCooldown, seconds_left - 1)
 
 def CancelCalc():
-    calculationRunning[-1] = [False, calculationRunning[-1][1]]
+    if calculationRunning:
+        calculationRunning[-1] = [False, calculationRunning[-1][1]]
     if not cooldownActive: #if there is no cooldown, enable the calculate button again
         calculateButton.config(state=tk.NORMAL)
     cancelButton.config(state=tk.DISABLED)
@@ -97,7 +129,7 @@ def CreateFrame():
     frame.pack(side=tk.TOP, fill=tk.X)
 
     # Welcome message
-    bold1Label = tk.Label(frame, text="Welcome to PIRAT - Python Risk Assessment Tool!", font=('TkDefaultFont', 12, 'bold'), anchor='center')
+    bold1Label = tk.Label(frame, text="Welcome to PIRAT - Python Integrated Risk Assessment Tool!", font=('TkDefaultFont', 12, 'bold'), anchor='center')
     bold1Label.pack(pady=5)
     text1Label = tk.Label(frame, text="This tool allows you to estimate the risk of compromise of PLC devices by using the information from the National Vulnerability Database (NVD) and the MITRE ATT&CK Framework.", justify=tk.LEFT)
     text1Label.pack(padx=10, pady=5, anchor='w')
@@ -252,13 +284,18 @@ def CreateTab1(notebook):
     padyValue = 3 # value used to pad the y axis, used to be more consistent
     tab1 = ttk.Frame(notebook)
 
-    textTop = """How to use:
-    1. Please select a PLC manufacturer and the industry of your organization from the corresponding dropdown menus
-    2. Select the appropriate output type - 'Risk assessment only' is the default. If 'Verbose' selected, specify whether you want the CVE descriptions to be outputted
-    3. Enter the model of the PLC in the search bar - do not include the name of the manufacturer
-    4. Check the appropriate impact boxes based on the consequences as a result of a PLC attack"""
-    tab1Label = tk.Label(tab1, text=textTop, justify=tk.LEFT)
-    tab1Label.pack()
+    # textTop = """How to use:
+    # 1. In the entry box, type in the name of the device you would like to analyse. The more specific you are, the easier it will be to find the appropriate device.
+    # 2. Select the appropriate output type:
+    #     'Risk assessment only' will provide a high level summarry of the risk analysis
+    #     'Verbose' will also include a list of all associated CVEs - this selection also provides the option to enable CVE descriptions in the output
+    # 3. Choose whether or not you want to modify the CVEs listed on a device - use this if specific CVEs have been patched
+    # 4. Assign severities for each of the impact categories.
+    # 5. Press 'Calculate Risk' once you are ready to calculate.
+    #     If more than once device is found with the supplied name, a pop-up will appear. Select the specific device you require.
+    #     If 'Apply CVE patches' has been selected, a pop-up will appear. Choose the CVEs you do not want included in the calculation."""
+    # tab1Label = tk.Label(tab1, text=textTop, justify=tk.LEFT)
+    # tab1Label.pack()
     
 
     # Create frames for left and right sides with borders
@@ -287,7 +324,7 @@ def CreateTab1(notebook):
     CreateCategories(rightFrame)
     rightFrame.pack(side=tk.RIGHT, padx=10, pady=5, fill=tk.BOTH, expand=True, anchor='center')
 
-    notebook.add(tab1, text="Individual PLC Calculation")
+    notebook.add(tab1, text="Individual Device Calculation")
         
 def CreateTab2(notebook):
     tab2 = ttk.Frame(notebook)
@@ -324,7 +361,7 @@ def CreateTab2(notebook):
     # rightFrame = tk.Frame(tab2, bd=1, relief=tk.SUNKEN)
     # #CreateCategories(rightFrame)
     # rightFrame.pack(side=tk.RIGHT, padx=10, pady=5, fill=tk.BOTH, expand=True, anchor='center')
-    notebook.add(tab2, text="Group PLC Calculation")
+    notebook.add(tab2, text="Group Device Calculation")
 
 def CreateNotebook():
     notebook = ttk.Notebook(root)
