@@ -230,7 +230,7 @@ def ModifyBaseCVSS(frame):
 
     modifyBaseCVSS = tk.IntVar()
     modifyBaseCheckbox = tk. Checkbutton(frame, text='Modify Base CVSS', variable=modifyBaseCVSS, onvalue=2, offvalue=0)
-    modifyBaseCheckbox.grid(row=3, column=2, padx = 10, pady=5, sticky='w')
+    modifyBaseCheckbox.grid(row=2, column=2, padx = 10, pady=5, sticky='w')
     #applyCheckbox.config(state=tk.DISABLED)
 
 def VerboseCheckboxSettings(frame):
@@ -239,7 +239,7 @@ def VerboseCheckboxSettings(frame):
 
     cveDesc = tk.IntVar()
     verboseGUI = tk. Checkbutton(frame, text='Include CVE description',variable=cveDesc, onvalue=2, offvalue=0)
-    verboseGUI.grid(row=2, column=2, padx = 10, pady=5, sticky='w')
+    verboseGUI.grid(row=3, column=1, padx = 10, pady=5, sticky='w')
     verboseGUI.config(state=tk.DISABLED)
 
 def StateVerbose():

@@ -46,6 +46,13 @@ def create_popup(name):
         "Report Confidence": ["Not Defined", "Unknown", "Reasonable", "Confirmed"]
     }
 
+    close_flag = True  # Flag to indicate how the window was closed
+
+    def on_close():
+        nonlocal close_flag
+        close_flag = False
+        select_and_close_window()
+
     for dropdown_name, options in dropdown_options.items():
         label = tk.Label(popup, text=f"{dropdown_name}:")
         label.pack(padx=10, pady=5, anchor='w')
@@ -60,14 +67,19 @@ def create_popup(name):
 
     select_button = tk.Button(popup, text="Select", command=select_and_close_window)
     select_button.pack(pady=10)
+
+    popup.geometry('+%d+%d'%(200,300))
+    popup.protocol("WM_DELETE_WINDOW", on_close)
     popup.wait_window()
 
+    return close_flag
+
 def GetModifiedCVSS(name):
-    create_popup(name)
+    closeFlag = create_popup(name)
     E = 'E:' + str(selected_values['Exploit Code Maturity'])
     RL = 'RL:' + str(selected_values['Remediation Level']) 
     RC = "RC:" + str(selected_values['Report Confidence']) 
-    return E, RL, RC
+    return (E, RL, RC), closeFlag
 
 if __name__ == "__main__":
     # Main logic

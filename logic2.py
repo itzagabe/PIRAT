@@ -51,6 +51,8 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
             actorsScore = getActorNumberRiskScore(actorsList)
             impactCat = GetImpact(categoryList) #this is the mitre impact calculation
 
+            continueModifying = True #gets set to false
+
             for eachCVE in reversed(cveList):
                 if getBaseScoreCVE(eachCVE) == -1:
                     # There is no base score for the CVE, likely very recent
@@ -59,15 +61,20 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
                 else:
                     cveCVSS = getCVSS(eachCVE)
                     cveImpact = 0
-                    if not cveCVSS[0][0] == 'V2' and modifyBaseCVSS:
-                        impactScore = GetModifiedCVSS(eachCVE.id)
+                    if not cveCVSS[0][0] == 'V2' and modifyBaseCVSS and continueModifying:
+                        impactScore, continueModifying = GetModifiedCVSS(eachCVE.id)
                         impactScore = '/' + '/'.join(impactScore)
                         impactScore = cveCVSS[1] + impactScore
                         impactScore = calculate_vector(impactScore, cvss31)[2]
                         #print(f'CVSS 3, {impactScore}')
                     else:
                         impactScore = getCVSS(eachCVE)[0][1]
-                        #print(f'CVSS 2, {impactScore}')
+                        
+                        #debug code
+                        if continueModifying:
+                            print(f'CVSS 2, {impactScore}')
+                        else:
+                            print("Skipping over the rest")
 
                     multiplier = getMultiplierCVE(eachCVE)
                     totalImpact += impactScore * multiplier
