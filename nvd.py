@@ -135,33 +135,47 @@ def getImpactConversion(cveWord):
     return result
 
 def getMultiplierCVE(cveItem):
-    multiplier = 1
     CVEYearString = cveItem.published
-    cveYear = datetime (int(CVEYearString[0:4]), int(CVEYearString[5:7]), int(CVEYearString[8:10]))
+    cveYear = datetime(int(CVEYearString[0:4]), int(CVEYearString[5:7]), int(CVEYearString[8:10]))
     currentYear = datetime.today()
-    yearDelta = currentYear - cveYear
-    if int(yearDelta.days) <= 365:
-        multiplier = 1
-    elif int(yearDelta.days) <= (2 * 365):
-        multiplier = 0.9
-    elif int(yearDelta.days) <= (3 * 365):
-        multiplier = 0.8
-    elif int(yearDelta.days) <= (4 * 365):
-        multiplier = 0.7
-    elif int(yearDelta.days) <= (5 * 365):
-        multiplier = 0.6
-    elif int(yearDelta.days) <= (6 * 365):
-        multiplier = 0.5
-    elif int(yearDelta.days) <= (7 * 365):
-        multiplier = 0.4
-    elif int(yearDelta.days) <= (8 * 365):
-        multiplier = 0.3  
-    elif int(yearDelta.days) <= (9 * 365):
-        multiplier = 0.2
+    yearDelta = (currentYear - cveYear).days // 365
+
+    if yearDelta <= 0:
+        return 1.0
+    elif yearDelta <= 9:
+        multiplier = 1.0 - (yearDelta * 0.1)
     else:
-        multiplier = 0.1  
+        multiplier = 0.1
 
     return multiplier
+
+    # multiplier = 1
+    # CVEYearString = cveItem.published
+    # cveYear = datetime (int(CVEYearString[0:4]), int(CVEYearString[5:7]), int(CVEYearString[8:10]))
+    # currentYear = datetime.today()
+    # yearDelta = currentYear - cveYear
+    # if int(yearDelta.days) <= 365:
+    #     multiplier = 1
+    # elif int(yearDelta.days) <= (2 * 365):
+    #     multiplier = 0.9
+    # elif int(yearDelta.days) <= (3 * 365):
+    #     multiplier = 0.8
+    # elif int(yearDelta.days) <= (4 * 365):
+    #     multiplier = 0.7
+    # elif int(yearDelta.days) <= (5 * 365):
+    #     multiplier = 0.6
+    # elif int(yearDelta.days) <= (6 * 365):
+    #     multiplier = 0.5
+    # elif int(yearDelta.days) <= (7 * 365):
+    #     multiplier = 0.4
+    # elif int(yearDelta.days) <= (8 * 365):
+    #     multiplier = 0.3  
+    # elif int(yearDelta.days) <= (9 * 365):
+    #     multiplier = 0.2
+    # else:
+    #     multiplier = 0.1  
+
+    # return multiplier
 
 def getLatestCVEList(cveList):
     index = 0

@@ -103,7 +103,7 @@ def EnableButton():
 #     tk.messagebox.showinfo("Cooldown", f"Button on cooldown. {seconds_left} seconds left.")
         
 def PerformCalc():
-    CalculateRisk(entryField.get(), industryVariable.get(), typeVariable.get(), cveDesc.get(), applyPatch.get(), modifyBaseCVSS.get(), checkboxList)
+    CalculateRisk(entryField.get(), industryVariable.get(), typeVariable.get(), cveDesc.get(), applyPatch.get(), modifyBaseCVSS.get(), checkboxList, dataRate, dataImportance)
     #DisplayRisk(risk)
     #calculationRunning.pop()
     calculateButton.config(state=tk.NORMAL)
@@ -172,7 +172,47 @@ def IndustryDropdownSettings(frame):
     industryVariable.set("Select industry:") # default value
     industryDropdown = tk.OptionMenu(frame, industryVariable, *OPTIONS)
     industryDropdown.config(width=20)
-    industryDropdown.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+    #industryDropdown.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+
+def DataInfo(frame):
+    global dataRate, dataImportance
+    OPTIONS = [('Low', 0.75), ('Medium', 1), ('High', 1.2), ('Critical', 1.5)]
+    dataRate = OPTIONS[0][1]
+    dataImportance = OPTIONS[0][1]
+
+    def DataMapping(selectedOption, target):
+        global dataRate, dataImportance
+        mapping = dict(OPTIONS)
+        if target == "rate":
+            dataRate = mapping[selectedOption]
+            print("Data Rate:", dataRate)
+        elif target == "importance":
+            dataImportance = mapping[selectedOption]
+            print("Data Importance:", dataImportance)
+
+    
+
+    typeText1 = "Data Rate:"
+    typeLabel1 = tk.Label(frame, text=typeText1, justify=tk.LEFT)
+    typeLabel1.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+
+    dataRateString = tk.StringVar(root, OPTIONS[0][0])
+    #dataRateString.set("Data Rate:")  # default value
+    rateDropdown = tk.OptionMenu(frame, dataRateString, *[option[0] for option in OPTIONS], command=lambda selectedOption: DataMapping(selectedOption, "rate"))
+    rateDropdown.config(width=20)
+    rateDropdown.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+
+
+    typeText2 = "Data Importance:"
+    typeLabel2 = tk.Label(frame, text=typeText2, justify=tk.LEFT)
+    typeLabel2.grid(row=2, column=0, padx=10, pady=5, sticky='w')
+
+    dataImportanceString = tk.StringVar(root, OPTIONS[0][0])
+    #dataImportanceString.set("Data Importance:")  # default value
+    importanceDropdown = tk.OptionMenu(frame, dataImportanceString, *[option[0] for option in OPTIONS], command=lambda selectedOption: DataMapping(selectedOption, "importance"))
+    importanceDropdown.config(width=20)
+    importanceDropdown.grid(row=3, column=0, padx=10, pady=5, sticky='w')
+
 
 def ManufacturerDropdownSettings(frame):
     global manufacturerVariable
@@ -318,7 +358,8 @@ def CreateTab1(notebook):
     leftRightFrame = tk.Frame(leftFrame, bd=1, relief=tk.SUNKEN)
 
     # Left side UI elements
-    IndustryDropdownSettings(leftLeftFrame)
+    IndustryDropdownSettings(leftLeftFrame) # DISABLED ATM
+    DataInfo(leftLeftFrame) # DISABLED ATM
     #ManufacturerDropdownSettings(leftLeftFrame)
 
     RadioButtonSettings(leftLeftFrame)

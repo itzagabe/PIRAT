@@ -1,4 +1,5 @@
 import tkinter as tk
+import math
 from nvd import *
 from mitre import *
 import re
@@ -7,7 +8,7 @@ import threading
 from cvsslib import cvss2, cvss31, calculate_vector
 from cvss import GetModifiedCVSS
 
-def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, modifyBaseCVSS, categoryList):
+def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, modifyBaseCVSS, categoryList, dataRate, dataImportance):
         global calculationRunning
 
         currentID = threading.current_thread().ident
@@ -78,12 +79,22 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
 
                     multiplier = getMultiplierCVE(eachCVE)
                     totalImpact += impactScore * multiplier
+            
+            print(totalImpact)
+            # weighted total impact calculation
+            if totalImpact > 10:
+                totalTemp = totalImpact - 10
+                totalTemp = math.sqrt(totalTemp)
+                totalImpact = 10 + totalTemp
+                print(totalImpact)
+                if totalImpact > 20: 
+                    totalImpact = 20
 
-            formulaRes = impactCat + totalImpact#5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
+            formulaResult = (impactCat + totalImpact) * (dataRate * dataImportance) #5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
             #formulaRes = ((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4 * actorsScore * impactCat) / 3
 
             totalRiskOutput = outputRiskInfo(industryDropdown, actorsList, totalImpact, 
-                                             formulaRes, numberVuln, cpeOfficialName, impactCat, typeVariable, verbose)
+                                             formulaResult, numberVuln, cpeOfficialName, impactCat, typeVariable, verbose)
             DisplayRisk(totalRiskOutput)
         
         StopCalculation(currentID) #clear thread once error
@@ -354,13 +365,13 @@ def getSearchTermList(entryField, manufacturerDropdown):
 
 def getImpactMultiplier(category):
     if category == 4:
-        return 8
+        return 10
     elif category == 3:
-        return 5
+        return 7
     elif category == 2:
-        return 2.5
+        return 4
     elif category == 1:
-        return 1
+        return 2
     elif category == 0:
         return 0
     else:
