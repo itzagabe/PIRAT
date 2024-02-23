@@ -10,94 +10,182 @@ from cvss import GetModifiedCVSS
 
 def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, modifyBaseCVSS, categoryList, dataRate, dataImportance):
         global calculationRunning
-
+        #entryField = ["simatic", "simatic s7"]
         currentID = threading.current_thread().ident
         #currentID = currentThread.ident
         #print(currentID)
         # call functions from nvd and mitre
         # have sub functions for each call
         # as much abstraction as possible
-        verbose = ""
-        multiplier = 0
-        attack = Attck()
-
-        resultTuple = searchPLCInfoNVD(entryField)
-        if resultTuple[0] is None: #if no results are found, give error
-            StopCalculation(currentID)
-            return 
         
-        cveList = resultTuple[0]
-        searchIndex = resultTuple[1]
-        actorsList = getListOfActorsForIndustry(industryDropdown)
 
-       
-        errorNoCVE(cveList)  # check whether the cveList is empty - useless to continue if not
+        def individualDevice():
+          verbose = ""
+          multiplier = 0
+          resultTuple = searchPLCInfoNVD(entryField)
+          if resultTuple[0] is None: #if no results are found, give error
+              StopCalculation(currentID)
+              return 
+          
+          cveList = resultTuple[0]
+
         
-        if CheckStatus(calculationRunning, currentID): #if the thread was cancelled, don't do this
-            # if apply patches checkmark - popup
-            if applyPatch:
-                RemovePatchedCVEs(cveList)
+          errorNoCVE(cveList)  # check whether the cveList is empty - useless to continue if not
+          
+          if CheckStatus(calculationRunning, currentID): #if the thread was cancelled, don't do this
+              # if apply patches checkmark - popup
+              if applyPatch:
+                  RemovePatchedCVEs(cveList)
 
-            # If verbose, generate verbose output
-            if typeVariable == 2:
-                if cveDesc == 2:
-                    verbose = generateVerboseOutput(cveList, actorsList, True) # verbose + descritpion
-                else: 
-                    verbose = generateVerboseOutput(cveList, actorsList, False) # only verbose
-                
+              # If verbose, generate verbose output
+              if typeVariable == 2:
+                  if cveDesc == 2:
+                      verbose = generateVerboseOutput(cveList, True) # verbose + descritpion
+                  else: 
+                      verbose = generateVerboseOutput(cveList, False) # only verbose
+                  
 
-            cvssScore = 0.0
-            totalImpact = 0
-            numberVuln = len(cveList)
-            actorsScore = getActorNumberRiskScore(actorsList)
-            impactCat = GetImpact(categoryList) #this is the mitre impact calculation
+              cvssScore = 0.0
+              totalImpact = 0
+              numberVuln = len(cveList)
+              impactCat = GetImpact(categoryList) #this is the mitre impact calculation
 
-            continueModifying = True #gets set to false
+              continueModifying = True #gets set to false
 
-            for eachCVE in reversed(cveList):
-                if getBaseScoreCVE(eachCVE) == -1:
-                    # There is no base score for the CVE, likely very recent
-                    # skip this CVE
-                    continue
-                else:
-                    cveCVSS = getCVSS(eachCVE)
-                    cveImpact = 0
-                    if not cveCVSS[0][0] == 'V2' and modifyBaseCVSS and continueModifying:
-                        impactScore, continueModifying = GetModifiedCVSS(eachCVE.id)
-                        impactScore = '/' + '/'.join(impactScore)
-                        impactScore = cveCVSS[1] + impactScore
-                        impactScore = calculate_vector(impactScore, cvss31)[2]
-                        #print(f'CVSS 3, {impactScore}')
-                    else:
-                        impactScore = getCVSS(eachCVE)[0][1]
-                        
-                        #debug code
-                        if continueModifying:
-                            print(f'CVSS 2, {impactScore}')
-                        else:
-                            print("Skipping over the rest")
+              for eachCVE in reversed(cveList):
+                  if getBaseScoreCVE(eachCVE) == -1:
+                      # There is no base score for the CVE, likely very recent
+                      # skip this CVE
+                      continue
+                  else:
+                      cveCVSS = getCVSS(eachCVE)
+                      cveImpact = 0
+                      if not cveCVSS[0][0] == 'V2' and modifyBaseCVSS and continueModifying:
+                          impactScore, continueModifying = GetModifiedCVSS(eachCVE.id)
+                          impactScore = '/' + '/'.join(impactScore)
+                          impactScore = cveCVSS[1] + impactScore
+                          impactScore = calculate_vector(impactScore, cvss31)[2]
+                          #print(f'CVSS 3, {impactScore}')
+                      else:
+                          impactScore = getCVSS(eachCVE)[0][1]
+                          
+                          #debug code
+                          if continueModifying:
+                              print(f'CVSS 2, {impactScore}')
+                          else:
+                              print("Skipping over the rest")
 
-                    multiplier = getMultiplierCVE(eachCVE)
-                    totalImpact += impactScore * multiplier
+                      multiplier = getMultiplierCVE(eachCVE)
+                      totalImpact += impactScore * multiplier
+              
+              #print(totalImpact)
+              # weighted total impact calculation
+              if totalImpact > 10:
+                  totalTemp = totalImpact - 10
+                  totalTemp = math.sqrt(totalTemp)
+                  totalImpact = 10 + totalTemp
+                  #print(totalImpact)
+                  if totalImpact > 20: 
+                      totalImpact = 20
+
+              formulaResult = (impactCat + totalImpact) * (dataRate * dataImportance) #5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
+              #formulaRes = ((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4 * actorsScore * impactCat) / 3
+
+              totalRiskOutput = outputRiskInfo(industryDropdown, totalImpact, 
+                                              formulaResult, numberVuln, cpeOfficialName, impactCat, typeVariable, verbose)
+              DisplayRisk(totalRiskOutput)
+          
+          StopCalculation(currentID) #clear thread once error
+        
+        def groupDevice():
+          print(entryField)
+          verbose = ""
+          cveList = []
+          multiplier = 0
+
+
+          #First, get all CPEs for each device
+          for index, field in enumerate(entryField):
+            print(field)
+            resultTuple = searchPLCInfoNVD(field, index + 1, len(entryField))
+            if resultTuple[0] is None: #if no results are found, give error
+                StopCalculation(currentID)
+                return 
             
-            #print(totalImpact)
-            # weighted total impact calculation
-            if totalImpact > 10:
-                totalTemp = totalImpact - 10
-                totalTemp = math.sqrt(totalTemp)
-                totalImpact = 10 + totalTemp
+            cveList.append(resultTuple[0])
+          
+          errorNoCVE(cveList)  # check whether the cveList is empty - useless to continue if not
+          
+          completeImpact = 0
+          totalCVEs = 0
+
+          # Next, do the calculation
+          for individualCVE in cveList:
+            if CheckStatus(calculationRunning, currentID): #if the thread was cancelled, don't do this
+                # if apply patches checkmark - popup
+                if applyPatch:
+                    RemovePatchedCVEs(individualCVE)
+                  
+
+                totalImpact = 0
+                numberVuln = len(individualCVE)
+                totalCVEs += numberVuln
+                impactCat = GetImpact(categoryList) #this is the mitre impact calculation
+
+                continueModifying = True #gets set to false
+
+                for eachCVE in reversed(individualCVE):
+                    if getBaseScoreCVE(eachCVE) == -1:
+                        # There is no base score for the CVE, likely very recent
+                        # skip this CVE
+                        continue
+                    else:
+                        cveCVSS = getCVSS(eachCVE)
+                        cveImpact = 0
+                        if not cveCVSS[0][0] == 'V2' and modifyBaseCVSS and continueModifying:
+                            impactScore, continueModifying = GetModifiedCVSS(eachCVE.id)
+                            impactScore = '/' + '/'.join(impactScore)
+                            impactScore = cveCVSS[1] + impactScore
+                            impactScore = calculate_vector(impactScore, cvss31)[2]
+                            #print(f'CVSS 3, {impactScore}')
+                        else:
+                            impactScore = getCVSS(eachCVE)[0][1]
+                            
+                            #debug code
+                            if continueModifying:
+                                print(f'CVSS 2, {impactScore}')
+                            else:
+                                print("Skipping over the rest")
+
+                        multiplier = getMultiplierCVE(eachCVE)
+                        totalImpact += impactScore * multiplier
+                
                 #print(totalImpact)
-                if totalImpact > 20: 
-                    totalImpact = 20
+                # weighted total impact calculation
+                if totalImpact > 10:
+                    totalTemp = totalImpact - 10
+                    totalTemp = math.sqrt(totalTemp)
+                    totalImpact = 10 + totalTemp
+                    #print(totalImpact)
+                    if totalImpact > 20: 
+                        totalImpact = 20
+                completeImpact += totalImpact
+          completeImpact = completeImpact / len(cveList)
+          formulaResult = (impactCat + completeImpact) * (dataRate * dataImportance) #5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
 
-            formulaResult = (impactCat + totalImpact) * (dataRate * dataImportance) #5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
-            #formulaRes = ((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4 * actorsScore * impactCat) / 3
+          totalRiskOutput = outputRiskInfoGroup(len(entryField), completeImpact, 
+                                          formulaResult, totalCVEs, impactCat, typeVariable, verbose)
+          DisplayRisk(totalRiskOutput)
+          
+          StopCalculation(currentID) #clear thread once error
+          
 
-            totalRiskOutput = outputRiskInfo(industryDropdown, actorsList, totalImpact, 
-                                             formulaResult, numberVuln, cpeOfficialName, impactCat, typeVariable, verbose)
-            DisplayRisk(totalRiskOutput)
+        if not isinstance(entryField, list):
+            individualDevice()
+        else:
+            groupDevice()
+
         
-        StopCalculation(currentID) #clear thread once error
 
 def GetImpact(checkboxList):
     global impactTotal
@@ -193,7 +281,38 @@ def DisplayRisk(riskVal):
     # Insert output into textbox.
     outputBox.insert(tk.END, riskVal)
 
-def outputRiskInfo(industryDropdown, actorsList, totalImpact, formulaRes, numberVuln, cpeOfficialName, impactCat, selection, verbose):
+def outputRiskInfoGroup(numOfDevices, totalImpact, formulaRes, numberVuln, impactCat, selection, verbose):
+
+    output = "The number of devices in this group is: " + str(numOfDevices) + "\n" 
+    output += "The number of vulnerabilities for this PLC family is:\n"
+    output += str(numberVuln) + "\n"
+    output += "The risk score for this PLC family is:\n"
+    output += str(round(formulaRes, 2)) + "\n"
+    output += "The risk subscores for this PLC family are:\n"
+    output += "CVSS Score: " + str(round(totalImpact, 2)) + "\n"
+    output += "MITRE Impact Risk Score: " + str(round(impactCat, 2)) + "\n"
+    if formulaRes > 8:
+        output += "Your device is at critical risk!\n"
+        output += "Check vendor website for latest patches/guidance.\n"
+        # if not verbose
+        if selection != 4:
+            output += "Try calculating risk with verbose output option\nselected for more information about this device.\n"
+    elif formulaRes > 6:
+        output += "Your device is at high risk!\n"
+    elif formulaRes > 4:
+        output += "Your device is at medium risk\n"
+    else:
+        output += "Your device is at low risk!\n"
+
+    # if verbose
+    if selection == 2 or selection == 3:
+        output += verbose
+        # reset verbose for future queries
+        verbose = ""
+
+    return output
+
+def outputRiskInfo(industryDropdown, totalImpact, formulaRes, numberVuln, cpeOfficialName, impactCat, selection, verbose):
 
     output = "The number of vulnerabilities for this PLC family is:\n"
     output += str(numberVuln) + "\n"
@@ -218,9 +337,6 @@ def outputRiskInfo(industryDropdown, actorsList, totalImpact, formulaRes, number
     output += "The term we searched for is : " + cpeOfficialName + "\n" 
     # output += "The actors which attack the " + industryDropdown + "industry are\n"
 
-#    for actor in actorsList:
-#       output += str(actor) + "\n"
-
     # if verbose
     if selection == 2 or selection == 3:
         output += verbose
@@ -229,15 +345,8 @@ def outputRiskInfo(industryDropdown, actorsList, totalImpact, formulaRes, number
 
     return output
 
-def generateVerboseOutput(cveList, actorsList, description):
+def generateVerboseOutput(cveList, description):
     verbose = ""
-    if (len(actorsList) > 0):
-        verbose += "\nAPTs that are known to attack this industry:\n\n"
-        verbose += "["
-        for actor in actorsList:
-            verbose += actor + ", "
-        verbose = re.sub(r"..$", "] ", verbose)
-        verbose += "\n\n"
     verbose += "Here is some information about the latest CVEs impacting this PLC family.\n\n"
 
     for eachCVE in reversed(cveList):
@@ -263,7 +372,7 @@ def generateVerboseOutput(cveList, actorsList, description):
 def CheckForError(entryField, categoryList):
     noError = True
     # if the manufacturer is Other and the field is empty we have nothing to search for
-    if entryField.get() == "":
+    if entryField == "":
         # pop up
         tk.messagebox.showerror("The PLC search field is empty!", "Unfortunately, we're not mind readers! Please input a PLC family in the search bar.")
         noError = False
@@ -280,7 +389,7 @@ def errorNoCVE(cveList):
     if len(cveList) == 0:
         tk.messagebox.showerror("Search error!", "Apologies, we could not find any PLC model with the given name. Try modifying the input in the search field.")
 
-def searchPLCInfoNVD(searchTermList):
+def searchPLCInfoNVD(searchTermList, currentDeviceNumber=None, totalDevicenumber=None):
     global cpeOfficialName
     cveList = []
     indexOfList = 0
@@ -289,7 +398,14 @@ def searchPLCInfoNVD(searchTermList):
         tk.messagebox.showerror("Error", "An error has occurred - please be more specific with your search")
         #print("An error has occurred - no CPEs were found")
         return None, None
-    cpeName = chooseWhichCPE(cpeList)
+    
+    #used to tell the popup how many devices in group
+    if currentDeviceNumber is None:
+      cpeName = chooseWhichCPE(cpeList)
+    else:
+      cpeName = chooseWhichCPE(cpeList, currentDeviceNumber, totalDevicenumber)
+
+
     if cpeName:
         cpeOfficialName = cpeName.cpeName #THIS IS TEMP
         cveList = searchNVD(cpeName.cpeName)
@@ -309,7 +425,7 @@ def searchPLCInfoNVD(searchTermList):
  
     return cveList2, indexOfList
 
-def chooseWhichCPE(cpeList):
+def chooseWhichCPE(cpeList, currentDeviceNumber=None, totalDevicenumber=None):
     selectedValue = None
 
     def on_button_click():
@@ -322,11 +438,14 @@ def chooseWhichCPE(cpeList):
             return selectedValue
 
     popup = tk.Toplevel()
-    popup.title("Choose your CPE")
+    if currentDeviceNumber is None:
+      popup.title("Choose your CPE")
+    else:
+      popup.title(f"Choose your CPE - ({currentDeviceNumber}/{totalDevicenumber})")
     popup.resizable(False, False)
 
     maxLength = max(len(cpe.cpeName) for cpe in cpeList)
-    listbox = tk.Listbox(popup, width=maxLength + 2, height=20)  # Set the width based on the longest string
+    listbox = tk.Listbox(popup, width=maxLength + 2, height=20)
     for cpe in cpeList:
         listbox.insert(tk.END, cpe.cpeName)
     listbox.grid(row=0, column=0, pady=10, sticky=tk.NSEW)  # Use grid instead of pack
