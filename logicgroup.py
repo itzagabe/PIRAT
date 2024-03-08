@@ -8,7 +8,7 @@ import threading
 from cvsslib import cvss2, cvss31, calculate_vector
 from cvss import GetModifiedCVSS
 
-def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, modifyBaseCVSS, categoryList, dataRate, dataImportance):
+def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, modifyBaseCVSS, categoryList, dataCalc):
         global calculationRunning
         #entryField = ["simatic", "simatic s7"]
         currentID = threading.current_thread().ident
@@ -48,7 +48,7 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
               cvssScore = 0.0
               totalImpact = 0
               numberVuln = len(cveList)
-              impactCat = GetImpact(categoryList) #this is the mitre impact calculation
+              impactCat = GetImpact(categoryList, dataCalc) #this is the mitre impact calculation
 
               continueModifying = True #gets set to false
 
@@ -88,7 +88,7 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
                   if totalImpact > 20: 
                       totalImpact = 20
 
-              formulaResult = (impactCat + totalImpact) * (dataRate * dataImportance) #5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
+              formulaResult = (impactCat + totalImpact) #5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
               #formulaRes = ((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4 * actorsScore * impactCat) / 3
 
               totalRiskOutput = outputRiskInfo(industryDropdown, totalImpact, 
@@ -130,7 +130,7 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
                 totalImpact = 0
                 numberVuln = len(individualCVE)
                 totalCVEs += numberVuln
-                impactCat = GetImpact(categoryList) #this is the mitre impact calculation
+                impactCat = GetImpact(categoryList, dataCalc) #this is the mitre impact calculation
 
                 continueModifying = True #gets set to false
 
@@ -187,7 +187,7 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
 
         
 
-def GetImpact(checkboxList):
+def GetImpact(checkboxList, dataCalc):
     global impactTotal
 
     impactTotal = 0 #default impact - nothing
@@ -195,6 +195,8 @@ def GetImpact(checkboxList):
     for impact in checkboxList:
         impactTotal += getImpactMultiplier(impact.get())
     
+    impactTotal += dataCalc
+
     if impactTotal:
         impactTotal /= len(checkboxList)
 

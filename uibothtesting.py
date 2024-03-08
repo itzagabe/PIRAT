@@ -114,7 +114,7 @@ def PerformCalc():
     else:
         tempEntry = entryFieldIndividual.get()
 
-    CalculateRisk(tempEntry, industryVariable.get(), typeVariable.get(), cveDesc.get(), applyPatch.get(), modifyBaseCVSS.get(), checkboxList, dataRate, dataImportance)
+    CalculateRisk(tempEntry, industryVariable.get(), typeVariable.get(), cveDesc.get(), applyPatch.get(), modifyBaseCVSS.get(), checkboxList, dataCalc)
     #DisplayRisk(risk)
     #calculationRunning.pop()
     calculateButton.config(state=tk.NORMAL)
@@ -186,13 +186,14 @@ def IndustryDropdownSettings(frame):
     #industryDropdown.grid(row=1, column=0, padx=10, pady=5, sticky='w')
 
 def DataInfo(frame):
-    global dataRate, dataImportance
+    global dataRate, dataImportance, dataCalc
+    dataCalc = 1
     OPTIONS = [('Low', 0.75), ('Medium', 1), ('High', 1.2), ('Critical', 1.5)]
     dataRate = OPTIONS[0][1]
     dataImportance = OPTIONS[0][1]
 
     def DataMapping(selectedOption, target):
-        global dataRate, dataImportance
+        global dataRate, dataImportance, dataCalc
         mapping = dict(OPTIONS)
         if target == "rate":
             dataRate = mapping[selectedOption]
@@ -200,29 +201,34 @@ def DataInfo(frame):
         elif target == "importance":
             dataImportance = mapping[selectedOption]
             print("Data Importance:", dataImportance)
+        dataCalc = dataRate * dataImportance
+        print(dataCalc)
+        #INSERT MAPPING HERE
 
-    
+    typeText = "Theft of System Information"
+    typeLabel = tk.Label(frame, text=typeText, justify=tk.LEFT)
+    typeLabel.grid(row=0, column=0, padx=35, pady=5, sticky='w')
 
     typeText1 = "Data Rate:"
     typeLabel1 = tk.Label(frame, text=typeText1, justify=tk.LEFT)
-    typeLabel1.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+    typeLabel1.grid(row=0, column=1, padx=3, pady=5, sticky='w')
 
     dataRateString = tk.StringVar(root, OPTIONS[0][0])
     #dataRateString.set("Data Rate:")  # default value
     rateDropdown = tk.OptionMenu(frame, dataRateString, *[option[0] for option in OPTIONS], command=lambda selectedOption: DataMapping(selectedOption, "rate"))
-    rateDropdown.config(width=20)
-    rateDropdown.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+    rateDropdown.config(width=5)
+    rateDropdown.grid(row=0, column=2, padx=3, pady=5, sticky='w')
 
 
     typeText2 = "Data Importance:"
     typeLabel2 = tk.Label(frame, text=typeText2, justify=tk.LEFT)
-    typeLabel2.grid(row=2, column=0, padx=10, pady=5, sticky='w')
+    typeLabel2.grid(row=0, column=3, padx=3, pady=5, sticky='w')
 
     dataImportanceString = tk.StringVar(root, OPTIONS[0][0])
     #dataImportanceString.set("Data Importance:")  # default value
     importanceDropdown = tk.OptionMenu(frame, dataImportanceString, *[option[0] for option in OPTIONS], command=lambda selectedOption: DataMapping(selectedOption, "importance"))
-    importanceDropdown.config(width=20)
-    importanceDropdown.grid(row=3, column=0, padx=10, pady=5, sticky='w')
+    importanceDropdown.config(width=5)
+    importanceDropdown.grid(row=0, column=4, padx=3, pady=5, sticky='w')
 
 
 def ManufacturerDropdownSettings(frame):
@@ -352,8 +358,8 @@ def loadFile(frame):
     loadFile.pack()
 
 # def test(frame):
-#     test1 = tk.Button(frame, text="test", command=test2)
-#     test1.grid(row=4, column=2, padx=10, pady=5, sticky='w')
+#     test1 = tk.Button(frame, text="test")
+#     test1.pack(side=tk.LEFT)#(row=4, column=2, padx=10, pady=5, sticky='w')
 #     #print(f"{typeVariable.get()}, {cveDesc.get()}")  
 
 # def test2():
@@ -466,7 +472,7 @@ def CreateShared():
 
     # Left side UI elements
     IndustryDropdownSettings(leftFrame) # DISABLED ATM
-    DataInfo(leftFrame) # DISABLED ATM
+    #DataInfo(leftFrame) # DISABLED ATM
     #ManufacturerDropdownSettings(leftLeftFrame)
 
     RadioButtonSettings(leftFrame)
@@ -481,7 +487,12 @@ def CreateShared():
 
     # Right side UI elements
     rightFrame = tk.Frame(frame, bd=1, relief=tk.SUNKEN)
-    CreateCategories(rightFrame)
+    rightFrameTop = tk.Frame(rightFrame)
+    rightFrameBottom = tk.Frame(rightFrame)
+    CreateCategories(rightFrameTop)
+    DataInfo(rightFrameBottom)
+    rightFrameTop.pack(side=tk.TOP)
+    rightFrameBottom.pack(side=tk.BOTTOM)
     rightFrame.pack(side=tk.RIGHT, padx=10, pady=5, fill=tk.BOTH, expand=True, anchor='center')
 
     bottomFrame = tk.Frame(root, bd=1, relief=tk.SUNKEN)
