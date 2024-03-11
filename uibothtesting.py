@@ -114,7 +114,7 @@ def PerformCalc():
     else:
         tempEntry = entryFieldIndividual.get()
 
-    CalculateRisk(tempEntry, industryVariable.get(), typeVariable.get(), cveDesc.get(), applyPatch.get(), modifyBaseCVSS.get(), checkboxList, dataCalc)
+    CalculateRisk(tempEntry, industryVariable.get(), typeVariable.get(), cveDesc.get(), applyPatch.get(), modifyBaseCVSS.get(), checkboxList, dataCalc, cryptoEntry.get())
     #DisplayRisk(risk)
     #calculationRunning.pop()
     calculateButton.config(state=tk.NORMAL)
@@ -339,18 +339,20 @@ def CalculateButton(frame):
     cancelButton.config(state=tk.DISABLED)
     cancelButton.pack(side=tk.RIGHT, anchor='w', expand=True, padx=20)#grid(row=4, column=2, padx=10, pady=5, sticky='w')
 
-def loadFile(frame):
+def LoadFile(frame):
     global entryFieldGroup
     entryFieldGroup = []
     
     def read_file_and_display():
+        global entryFieldGroup
         entryFieldGroup = []
         file_path = filedialog.askopenfilename(title="Select a file", filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
         try:
             with open(file_path, 'r') as file:
                 lines = file.readlines()
                 for line in lines:
-                    entryFieldGroup.append(line.strip())
+                    if not line.strip().startswith('#'):  # Check if the line starts with '#'
+                        entryFieldGroup.append(line.strip())
         except FileNotFoundError:
             print("File not found!")
         print(entryFieldGroup)
@@ -364,7 +366,19 @@ def loadFile(frame):
 
 # def test2():
 #     print(calculationRunning)
+
+def CryptoEntry(frame):
+    global cryptoEntry
     
+    entryLabel = tk.Label(frame, text="Enter your desired tolerance level.")
+    entryLabel.pack()
+    entryVar = tk.StringVar()
+    #entryVar.set("Enter the PLC model to analyze:")
+    cryptoEntry = tk.Entry(frame, width=50, textvariable=entryVar)
+    cryptoEntry.pack()
+    # entryField.bind("<Button-1>", OnEntryClick)
+    # return entryField
+
 def CreateTab1(notebook):
 
     padyValue = 3 # value used to pad the y axis, used to be more consistent
@@ -387,7 +401,8 @@ def CreateTab1(notebook):
     # Create frames for left and right sides with borders
     leftFrame = tk.Frame(tab1, bd=1, relief=tk.SUNKEN)
     
-    loadFile(leftFrame)#.pack(pady = 10) #gets entry field
+    LoadFile(leftFrame)#.pack(pady = 10) #gets entry field
+    CryptoEntry(leftFrame)
 
     # leftLeftFrame = tk.Frame(leftFrame, bd=1)#, relief=tk.SUNKEN
     # leftRightFrame = tk.Frame(leftFrame, bd=1, relief=tk.SUNKEN)

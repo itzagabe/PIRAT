@@ -8,7 +8,7 @@ import threading
 from cvsslib import cvss2, cvss31, calculate_vector
 from cvss import GetModifiedCVSS
 
-def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, modifyBaseCVSS, categoryList, dataCalc):
+def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, modifyBaseCVSS, categoryList, dataCalc, cryptoEntry):
         global calculationRunning
         #entryField = ["simatic", "simatic s7"]
         currentID = threading.current_thread().ident
@@ -94,7 +94,7 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
               totalRiskOutput = outputRiskInfo(industryDropdown, totalImpact, 
                                               formulaResult, numberVuln, cpeOfficialName, impactCat, typeVariable, verbose)
               DisplayRisk(totalRiskOutput)
-          
+
           StopCalculation(currentID) #clear thread once error
         
         def groupDevice():
@@ -151,11 +151,11 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
                         else:
                             impactScore = getCVSS(eachCVE)[0][1]
                             
-                            #debug code
-                            if continueModifying:
-                                print(f'CVSS 2, {impactScore}')
-                            else:
-                                print("Skipping over the rest")
+                            # #debug code
+                            # if continueModifying:
+                            #     print(f'CVSS 2, {impactScore}')
+                            # else:
+                            #     print("Skipping over the rest")
 
                         multiplier = getMultiplierCVE(eachCVE)
                         totalImpact += impactScore * multiplier
@@ -171,7 +171,12 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
                         totalImpact = 20
                 completeImpact += totalImpact
           completeImpact = completeImpact / len(cveList)
-          formulaResult = (impactCat + completeImpact) * (dataRate * dataImportance) #5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
+          formulaResult = (impactCat + completeImpact) #5#((exploitabilityScore + confidentialityEff + integrityEff + impactScore) / 4) / 3
+
+          if not cryptoEntry:
+            print('no')
+          else: 
+            print('yes')
 
           totalRiskOutput = outputRiskInfoGroup(len(entryField), completeImpact, 
                                           formulaResult, totalCVEs, impactCat, typeVariable, verbose)
