@@ -10,6 +10,7 @@ from cvss import GetModifiedCVSS
 
 def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatch, modifyBaseCVSS, categoryList, dataCalc, cryptoEntry):
         global calculationRunning
+
         #entryField = ["simatic", "simatic s7"]
         currentID = threading.current_thread().ident
         #currentID = currentThread.ident
@@ -98,7 +99,15 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
           StopCalculation(currentID) #clear thread once error
         
         def groupDevice():
-          print(entryField)
+          nonlocal cryptoEntry
+          finalCrypto = 0
+          cryptoCalc = isNumeric(cryptoEntry) # check if cryptoperiod calculation will occur
+
+          if cryptoCalc:
+            cryptoEntry = float(cryptoEntry)
+            print('Crypto calculation enabled')
+            print(entryField)
+
           verbose = ""
           cveList = []
           multiplier = 0
@@ -175,11 +184,13 @@ def CalculateRisk(entryField, industryDropdown, typeVariable, cveDesc, applyPatc
 
           if not cryptoEntry:
             print('no')
-          else: 
-            print('yes')
+          else: ### CRYPTOPERIOD CALCULATION
+            finalCrypto = cryptoEntry / formulaResult
+            cryptoEntry -= 1
+            print(cryptoEntry)
 
           totalRiskOutput = outputRiskInfoGroup(len(entryField), completeImpact, 
-                                          formulaResult, totalCVEs, impactCat, typeVariable, verbose)
+                                          formulaResult, totalCVEs, impactCat, typeVariable, verbose, finalCrypto)
           DisplayRisk(totalRiskOutput)
           
           StopCalculation(currentID) #clear thread once error
@@ -288,7 +299,7 @@ def DisplayRisk(riskVal):
     # Insert output into textbox.
     outputBox.insert(tk.END, riskVal)
 
-def outputRiskInfoGroup(numOfDevices, totalImpact, formulaRes, numberVuln, impactCat, selection, verbose):
+def outputRiskInfoGroup(numOfDevices, totalImpact, formulaRes, numberVuln, impactCat, selection, verbose, finalCrypto = 0):
 
     output = "The number of devices in this group is: " + str(numOfDevices) + "\n" 
     output += "The number of vulnerabilities for this PLC family is:\n"
@@ -310,6 +321,8 @@ def outputRiskInfoGroup(numOfDevices, totalImpact, formulaRes, numberVuln, impac
         output += "Your device is at medium risk\n"
     else:
         output += "Your device is at low risk!\n"
+    if finalCrypto != 0:
+        output += "\n\nYour recommended cryptoperiod is " + str(round(finalCrypto, 2)) + "\n\n"
 
     # if verbose
     if selection == 2 or selection == 3:
@@ -375,20 +388,33 @@ def generateVerboseOutput(cveList, description):
 
     return verbose
 
-
-def CheckForError(entryField, categoryList):
+def isNumeric(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+        
+def CheckForError(entryField, indOrGroup, cryptoEntry = None):
+        
     noError = True
+    print(cryptoEntry)
     # if the manufacturer is Other and the field is empty we have nothing to search for
-    if entryField == "":
-        # pop up
-        tk.messagebox.showerror("The PLC search field is empty!", "Unfortunately, we're not mind readers! Please input a PLC family in the search bar.")
-        noError = False
-    else:
-        for cat in categoryList:
-            if cat == 0:
+
+    if indOrGroup:
+        if len(entryField) == 0:
+            tk.messagebox.showerror("No devices can be found", "Please input a device family or upload a file.")
+            noError = False
+        elif cryptoEntry == "":
+            noError = True
+        elif not cryptoEntry is None:
+            if not isNumeric(cryptoEntry):
+                tk.messagebox.showerror("Incorrect Cryptoperiod", "Please input a numeric value as your cryptoperiod.")
                 noError = False
-                tk.messagebox.showerror("Impact checkbox empty", "Please select a checkbox for each category")                
-                break
+    elif entryField == "":
+        tk.messagebox.showerror("No devices can be found", "Please input a device family or upload a file.")
+        noError = False
+    
 
     return noError
 

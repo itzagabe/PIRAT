@@ -85,7 +85,7 @@ def PerformCalcInit():
     else:
         tempEntry = entryField
 
-    if CheckForError(tempEntry, checkboxList):
+    if CheckForError(tempEntry):
         if cooldownActive: #if you called the API recently, enact a cooldown
             return
         calculateButton.config(state=tk.DISABLED)

@@ -80,22 +80,42 @@ def PerformCalcInit():
     # print('hi')
     # tempImpact(checkboxList)
     # return
+    indOrGroup = 0
+
     if selectedTab:
         tempEntry = entryFieldGroup
+        indOrGroup = 1
     else:
         tempEntry = entryFieldIndividual.get()
 
-    if CheckForError(tempEntry, checkboxList):
-        if cooldownActive: #if you called the API recently, enact a cooldown
-            return
-        calculateButton.config(state=tk.DISABLED)
-        cancelButton.config(state=tk.NORMAL)
-        calcThread = threading.Thread(target=PerformCalc)
-        calcThread.setDaemon(True) #allows you to close program if thread is active
-        calcThread.start()
-        calculationRunning.append([True, calcThread.ident])
-        root.after(cooldownTime, EnableButton) #enable the button after x amount of time
-        cooldownActive = True
+    if not indOrGroup:
+        print('individual')
+        if CheckForError(tempEntry, 0):
+            if cooldownActive: #if you called the API recently, enact a cooldown
+                return
+            calculateButton.config(state=tk.DISABLED)
+            cancelButton.config(state=tk.NORMAL)
+            calcThread = threading.Thread(target=PerformCalc)
+            calcThread.setDaemon(True) #allows you to close program if thread is active
+            calcThread.start()
+            calculationRunning.append([True, calcThread.ident])
+            root.after(cooldownTime, EnableButton) #enable the button after x amount of time
+            cooldownActive = True
+    else:
+        print('group')
+        if CheckForError(tempEntry, 1, cryptoEntry.get()):
+            if cooldownActive: #if you called the API recently, enact a cooldown
+                return
+            calculateButton.config(state=tk.DISABLED)
+            cancelButton.config(state=tk.NORMAL)
+            calcThread = threading.Thread(target=PerformCalc)
+            calcThread.setDaemon(True) #allows you to close program if thread is active
+            calcThread.start()
+            calculationRunning.append([True, calcThread.ident])
+            root.after(cooldownTime, EnableButton) #enable the button after x amount of time
+            cooldownActive = True
+
+        
 
 def EnableButton():
     global cooldownActive, calculateButton
