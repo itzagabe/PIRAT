@@ -1,6 +1,7 @@
 import nvdlib
 import re
 from datetime import datetime, timedelta, date
+from nvdapikey import key
 #name = input ("PLC product name ")
 #cveList = nvdlib.searchCVE(keyword=name, limit=10)
 #for eachCVE in cveList:
@@ -23,21 +24,22 @@ from datetime import datetime, timedelta, date
 
 def searchNVDCPE(model):
     print("searching")
-    #model = 'cpe:2.3:h:siemens:simatic_s7-1200:-:*:*:*:*:*:*:*'
-    # find a way to securely store the key somewhere
     try:
-        cveList = nvdlib.searchCPE(keywordSearch=model)#, keywordExactMatch=True)
-        # Process the results here
+        if model.startswith("cpe:"):
+            model = model[:-2]
+            cveList = nvdlib.searchCPE(cpeMatchString=model, key= key, delay = 0.6)
+        else:
+            cveList = nvdlib.searchCPE(keywordSearch=model, key= key, delay = 0.6)
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
-        # Handle the error in a way that makes sense for your application #added exact match cpe:2.3:h:siemens:simatic_s7-1200:-:*:*:*:*:*:*:*
     return cveList
+
 
 def searchNVD(cpe):
     formatCPE = str(cpe)
     # find a way to securely store the key somewhere
-    cveList = nvdlib.searchCVE(cpeName = formatCPE)#, keywordExactMatch= True) #added exact match
+    cveList = nvdlib.searchCVE(cpeName = formatCPE, key= key, delay = 0.6)#, keywordExactMatch= True) #added exact match
     return cveList
 
 def getDescriptionCVE(cveItem):
@@ -178,11 +180,10 @@ def getMultiplierCVE(cveItem):
     # return multiplier
 
 def getLatestCVEList(cveList):
-    index = 0
-    for cve in cveList:
-        if len(re.findall("^CVE-20[1,2]", str(cve.id))) == 0:
-            cveList.pop(index)
-        else:
-            index += 1
-    
-    return cveList
+    # Define the cutoff date
+    cutoff_date = datetime.now() - timedelta(days=365 * 10)
+
+    # Filter the list to include only CVEs that are not older than the cutoff date
+    refined_cveList = [cve for cve in cveList if datetime.strptime(cve.published, '%Y-%m-%dT%H:%M:%S.%f') > cutoff_date]
+
+    return refined_cveList
