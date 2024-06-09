@@ -24,7 +24,7 @@ def searchPLCInfoNVD(searchTermList):
         if not event.wait(20):  # 20 seconds timeout
             refineSearchDevices.append(cpeTerm)
             continue
-        
+
         if len(cpeList) == 0:
             notFoundDevices.append(cpeTerm)
         elif len(cpeList) == 1:
@@ -44,8 +44,8 @@ def searchPLCInfoNVD(searchTermList):
     for cpe, count in officialCPE:
         cve_list = searchNVD(cpe)
         refinedCVEList = getLatestCVEList(cve_list) # get refined CVE list
-        cpe_cve_list.extend([(cpe, refinedCVEList)] * count)
-    
+        cpe_cve_list.extend([(cpe, [(cve, True) for cve in refinedCVEList])] * count)
+
     return cpe_cve_list
 
 def call_searchNVDCPE(cpeTerm, cpeList, event):
@@ -112,6 +112,7 @@ def showNotFoundDevicesPopup(notFoundDevices, refineSearchDevices):
     close_button.clicked.connect(dialog.accept)
 
     dialog.exec()
+
 
 # def searchNVD(cpe):
 #     # Mock implementation of searchNVD function. Replace with actual implementation.

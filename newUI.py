@@ -1,184 +1,169 @@
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QSizePolicy, QToolButton, QLabel, QSpacerItem, QGridLayout
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget,
+    QFrame, QSizePolicy, QToolButton, QLabel
+)
 from PySide6.QtCore import Qt
-from ImpactLogic import CreateLayout, DisplayResults, MapDataCategories
+from ImpactLogic import *
 
-Low = "#90EE90"  # Low
-Medium = "#ffd68b"  # Medium
-High = "#f09d9d"  # High
+low = "#90EE90"  # Low
+medium = "#ffd68b"  # Medium
+high = "#f09d9d"  # High
 
-def interpolate_color(start_color, end_color, factor):
-    # Helper function to interpolate between two colors
-    start_color = start_color.lstrip('#')
-    end_color = end_color.lstrip('#')
-    sr, sg, sb = int(start_color[0:2], 16), int(start_color[2:4], 16), int(start_color[4:6], 16)
-    er, eg, eb = int(end_color[0:2], 16), int(end_color[2:4], 16), int(end_color[4:6], 16)
-    
-    r = int(sr + (er - sr) * factor)
-    g = int(sg + (eg - sg) * factor)
-    b = int(sb + (eb - sb) * factor)
-    
-    return f'#{r:02x}{g:02x}{b:02x}'
+values = [0, 0, 0]
 
-def set_tooltips(widget, tooltips):
-    # Recursively find QLabel widgets and set their tooltips
+def SetTooltips(widget, tooltips):
     for child in widget.findChildren(QWidget):
         if isinstance(child, QLabel):
-            label_text = child.text().strip()
-            if label_text in tooltips:
-                child.setToolTip(tooltips[label_text])
-        set_tooltips(child, tooltips)
+            labelText = child.text().strip()
+            if labelText in tooltips:
+                child.setToolTip(tooltips[labelText])
+        SetTooltips(child, tooltips)
 
-def create_generic_layout(severity_list, category_list, num_button_groups, update_func, default_color, tooltips):
-    def update_button(button_groups, active_items, result_button):
-        returnValue = DisplayResults(button_groups, active_items)[0]
-        update_func(returnValue, result_button)
-
-    # Create the main layout and the UI frame
-    main_layout = QVBoxLayout()
-    main_layout.setSpacing(10)
-    main_layout.setContentsMargins(0, 0, 0, 0)
+def CreateGenericLayout(severityList, categoryList, numButtonGroups, updateFunc, defaultColor, tooltips, createResultButton):
     
-    ui_frame = QFrame()
-    ui_layout = QVBoxLayout(ui_frame)
-    ui_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-    ui_layout.setSpacing(10)
-    ui_layout.setContentsMargins(0, 0, 0, 0)
-    ui_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    def UpdateButton(buttonGroups, activeItems, resultButton=None):
+        returnValue = DisplayResults(buttonGroups, activeItems)
+        updateFunc(returnValue, resultButton)
 
-    button_groups, active_items = CreateLayout(ui_layout, severity_list, category_list, num_button_groups)
+    def CreateResultButtonWidget():
+        resultButton = QPushButton("")
+        resultButton.setEnabled(False)
+        resultButton.setStyleSheet(f"border-radius: 3px; color: black; background-color: {defaultColor};")
+        resultButton.setFixedHeight(20)
+        resultButton.setFixedWidth(230)
+        resultButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        resultButton.setToolTip("This button shows the calculated severity value.")
+        return resultButton
 
-    # Set tooltips for the category labels
-    set_tooltips(ui_frame, tooltips)
+    def ConnectButtons(buttonGroups, activeItems, resultButton, uiFrame):
+        for buttonGroupDict in buttonGroups:
+            for buttonGroup in buttonGroupDict.values():
+                buttonGroup.buttonToggled.connect(lambda: UpdateButton(buttonGroups, activeItems, resultButton))
+        for btn in uiFrame.findChildren(QToolButton):
+            btn.toggled.connect(lambda: UpdateButton(buttonGroups, activeItems, resultButton))
 
-    # Create the result button
-    result_button = QPushButton("")
-    result_button.setEnabled(False)
-    result_button.setStyleSheet(f"border-radius: 3px; color: black; background-color: {default_color};")
-    result_button.setFixedHeight(20)
-    result_button.setFixedWidth(230)
-    result_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-    result_button.setToolTip("This button shows the calculated severity value.")
+    mainLayout = QVBoxLayout()
+    mainLayout.setSpacing(10)
+    mainLayout.setContentsMargins(0, 0, 0, 0)
+    
+    uiFrame = QFrame()
+    uiLayout = QVBoxLayout(uiFrame)
+    uiLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+    uiLayout.setSpacing(10)
+    uiLayout.setContentsMargins(0, 0, 0, 0)
+    uiFrame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-    # Update the result button initially
-    update_button(button_groups, active_items, result_button)
+    buttonGroups, activeItems = CreateLayout(uiLayout, severityList, categoryList, numButtonGroups)
+    SetTooltips(uiFrame, tooltips)
 
-    # Connect the button groups to update the result button instantly
-    for button_group_dict in button_groups:
-        for button_group in button_group_dict.values():
-            button_group.buttonToggled.connect(lambda: update_button(button_groups, active_items, result_button))
+    if createResultButton:
+        resultButton = CreateResultButtonWidget()
+        UpdateButton(buttonGroups, activeItems, resultButton)
+        ConnectButtons(buttonGroups, activeItems, resultButton, uiFrame)
+        uiLayout.addWidget(resultButton, alignment=Qt.AlignTop | Qt.AlignHCenter)
+    else:
+        ConnectButtons(buttonGroups, activeItems, None, uiFrame)
 
-    # Add toggle connections for subcategory dropdowns
-    subcategory_buttons = ui_frame.findChildren(QToolButton)
-    for btn in subcategory_buttons:
-        btn.toggled.connect(lambda: update_button(button_groups, active_items, result_button))
+    return uiFrame
 
-    # Add the result button directly to the UI frame layout
-    ui_layout.addWidget(result_button, alignment=Qt.AlignTop | Qt.AlignHCenter)
-
-    return ui_frame
-
-def update_impact_layout(returnValue, result_button):
+def UpdateImpactLayout(returnValue, resultButton):
     returnValue2 = sum(val[3] for val in returnValue) / len(returnValue) if returnValue else 0
-    colors = [
-        (0, "#bababa"),  # None
-        (0.3, Low),  # Low
-        (0.6, Medium),  # Medium
-        (1, High)  # High
-    ]
+    colors = [(0, "#bababa"), (0.3, low), (0.6, medium), (1, high)]
     
     for i in range(len(colors) - 1):
         if colors[i][0] <= returnValue2 <= colors[i + 1][0]:
             factor = (returnValue2 - colors[i][0]) / (colors[i + 1][0] - colors[i][0])
-            color = interpolate_color(colors[i][1], colors[i + 1][1], factor)
+            color = InterpolateColour(colors[i][1], colors[i + 1][1], factor)
             break
     else:
         color = colors[-1][1]
 
-    result_button.setText(f"Average Severity: {returnValue2:.2f}")
-    result_button.setStyleSheet(f"background-color: {color}; border-radius: 3px; color: black;")
+    resultButton.setText(f"Average Severity: {returnValue2:.2f}")
+    resultButton.setStyleSheet(f"background-color: {color}; border-radius: 3px; color: black;")
+    values[0] = round(returnValue2, 2)
 
-def update_data_layout(returnValue, result_button):
-    chart_result = MapDataCategories(returnValue)
-    severity_label, severity_value = chart_result
-    color_map = {
-        "Very Low": "#d4f1d4",
-        "Low": Low,
-        "Moderate": Medium,
-        "High": High,
-        "Very High": "#f28888"
-    }
-    color = color_map.get(severity_label, "#FFFFFF")
-    result_button.setText(f"{severity_label} ({severity_value})")
-    result_button.setStyleSheet(f"background-color: {color}; border-radius: 3px; color: black;")
+def UpdateDataLayout(returnValue, resultButton):
+    severityLabel, severityValue = MapDataCategories(returnValue)
+    colorMap = {"Very Low": "#d4f1d4", "Low": low, "Moderate": medium, "High": high, "Very High": "#f28888"}
+    color = colorMap.get(severityLabel, "#FFFFFF")
+    resultButton.setText(f"{severityLabel} ({severityValue})")
+    resultButton.setStyleSheet(f"background-color: {color}; border-radius: 3px; color: black;")
+    values[1] = severityValue
+    
+def UpdatePolicyLayout(returnValue, resultButton):
+    values[2] = returnValue[0][3]
 
 def ImpactCategories():
-    severity_list = [
-        ("None", 0, "#bababa"),
-        ("Low", 0.3, Low),
-        ("Medium", 0.6, Medium),
-        ("High", 1, High)
+    severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high)]
+    categoryList = [
+        ("Operational", ["Proprietary", "System"]), ("Safety", []), ("Financial", []),
+        ("Privacy and Legislative", ["Societal Loss", "Regulatory Loss", "Environmental Loss"])
     ]
-    category_list = [
-        ("Operational", ["Proprietary", "System"]),
-        ("Safety", []),
-        ("Financial", []),
-        ("Privacy and Legislative", ["Societal Loss", 'Regulatory Loss', 'Environmental Loss'])
-    ]
-    num_button_groups = 2
-    default_color = "#bababa"
     tooltips = {
-        "Operational": "Operational impact category",
-        "Proprietary": "Operational - Proprietary subcategory",
-        "System": "Operational - System subcategory",
-        "Safety": "Safety impact category",
-        "Financial": "Financial impact category",
-        "Privacy and Legislative": "Privacy and Legislative impact category",
+        "Operational": "Operational impact category", "Proprietary": "Operational - Proprietary subcategory",
+        "System": "Operational - System subcategory", "Safety": "Safety impact category",
+        "Financial": "Financial impact category", "Privacy and Legislative": "Privacy and Legislative impact category",
         "Societal Loss": "Privacy and Legislative - Societal Loss subcategory",
         "Regulatory Loss": "Privacy and Legislative - Regulatory Loss subcategory",
         "Environmental Loss": "Privacy and Legislative - Environmental Loss subcategory"
     }
 
-    return create_generic_layout(severity_list, category_list, num_button_groups, update_impact_layout, default_color, tooltips)
+    return CreateGenericLayout(severityList, categoryList, 2, UpdateImpactLayout, "#bababa", tooltips, True)
 
 def DataCategories():
-    severity_list = [
-        ("Low", 1, Low),
-        ("Medium", 2, Medium),
-        ("High", 3, High),
-    ]
-    category_list = ['Data Rate', 'Publishers']
-    num_button_groups = 1
-    default_color = "#90EE90"
-    tooltips = {
-        "Data Rate": "Impact based on data rate",
-        "Publishers": "Impact based on number of publishers"
-    }
+    severityList = [("Low", 1, low), ("Medium", 2, medium), ("High", 3, high)]
+    tooltips = {"Data Rate": "Impact based on data rate", "Publishers": "Impact based on number of publishers"}
 
-    return create_generic_layout(severity_list, category_list, num_button_groups, update_data_layout, default_color, tooltips)
+    return CreateGenericLayout(severityList, ['Data Rate', 'Publishers'], 1, UpdateDataLayout, "#90EE90", tooltips, True)
+
+def PolicyCategories():
+    severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high)]
+    tooltips = {"Policy Strength": "How strong are security-related procedural policies and guidelines"}
+
+    return CreateGenericLayout(severityList, ['Policy Strength'], 1, UpdatePolicyLayout, "#bababa", tooltips, False)
 
 def main():
     app = QApplication(sys.argv)
     window = QMainWindow()
     window.setWindowTitle("Main UI")
 
-    # Setup the impact and data logic frames
-    impact_frame = ImpactCategories()
-    data_frame = DataCategories()
+    impactFrame = ImpactCategories()
+    dataFrame = DataCategories()
+    policyFrame = PolicyCategories()
     
-    # Create a main grid layout and add both frames to it at specific locations
-    main_layout = QGridLayout()
-    main_layout.setSpacing(10)
-    main_layout.setContentsMargins(0, 0, 0, 0)
+    mainLayout = QHBoxLayout()
+    mainLayout.setSpacing(10)
+    mainLayout.setContentsMargins(0, 0, 0, 0)
+    mainLayout.setAlignment(Qt.AlignTop)
+
+    leftLayout = QVBoxLayout()
+    leftLayout.setSpacing(10)
+    leftLayout.setAlignment(Qt.AlignTop)
     
-    # Add the data and impact frames to specific positions
-    main_layout.addWidget(data_frame, 0, 0, Qt.AlignTop | Qt.AlignLeft)
-    main_layout.addWidget(impact_frame, 0, 1, Qt.AlignTop | Qt.AlignLeft)
+    leftLayout.addWidget(policyFrame)
     
-    # Create a container widget and set its layout
+    dataContainer = QFrame()
+    dataContainerLayout = QVBoxLayout(dataContainer)
+    dataContainerLayout.setAlignment(Qt.AlignHCenter)
+    dataContainerLayout.addWidget(dataFrame)
+    leftLayout.addWidget(dataContainer)
+
+    mainLayout.addLayout(leftLayout)
+    mainLayout.addWidget(impactFrame)
+    
     container = QWidget()
-    container.setLayout(main_layout)
+    container.setLayout(mainLayout)
     window.setCentralWidget(container)
+
+    printButton = QPushButton("Print Values")
+    printButton.setFixedHeight(30)
+    printButton.setFixedWidth(100)
+    printButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    printButton.setToolTip("This button prints the values list.")
+    printButton.clicked.connect(lambda: print(values))
+    
+    mainLayout.addWidget(printButton, alignment=Qt.AlignBottom | Qt.AlignRight)
 
     window.show()
     sys.exit(app.exec())

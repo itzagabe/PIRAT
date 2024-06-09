@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QPushButton, QLineEdit, QComboBox, QMessageBox, QFrame, QFileDialog, QListWidget
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QLineEdit, QComboBox, QMessageBox, QFrame, QFileDialog, QListWidget, QCheckBox, QDialog
 )
 from PySide6.QtCore import Qt
 from NewLogicGroup import *
@@ -17,22 +17,33 @@ MAIN_WINDOW_WIDTH = 700
 MAIN_WINDOW_HEIGHT = 100
 MARGIN = 10
 
+
 deviceInfoList = []
 
 def dropdown_changed(dropdown, individual_widgets, group_widgets, result_list_individual, result_list_group):
     result_list_individual.clear()
     result_list_group.clear()
-    deviceInfoList.clear()
+
     if dropdown.currentText() == "Individual":
         for widget in group_widgets:
             widget.hide()
         for widget in individual_widgets:
             widget.show()
+        
+        if deviceInfoList and deviceInfoList[0][-1] == "individual":
+            result_list_individual.clear()
+            for cpe, _, _ in deviceInfoList:
+                result_list_individual.addItem(cpe)
     else:
         for widget in individual_widgets:
             widget.hide()
         for widget in group_widgets:
             widget.show()
+
+        if deviceInfoList and deviceInfoList[0][-1] == "group":
+            result_list_group.clear()
+            for cpe, _, _ in deviceInfoList:
+                result_list_group.addItem(cpe)
 
 def import_button_clicked(entry_box, result_list):
     global deviceInfoList
@@ -42,17 +53,16 @@ def import_button_clicked(entry_box, result_list):
     else:
         search_term = entry_box.text()
         deviceInfoList = searchPLCInfoNVD([(search_term, 1)])
+        deviceInfoList = [(cpe, cves, "individual") for cpe, cves in deviceInfoList]
         result_list.clear()
-        for cpe, _ in deviceInfoList:
+        for cpe, _, _ in deviceInfoList:
             result_list.addItem(cpe)
-
-    print(deviceInfoList[0])
 
 def load_button_clicked(path_box, list_widget):
     global deviceInfoList
     file_dialog = QFileDialog()
     file_path, _ = file_dialog.getOpenFileName(None, "Open File", "", "All Files (*)")
-    
+
     if file_path:
         path_box.setText(file_path)
         search_terms = []
@@ -67,14 +77,14 @@ def load_button_clicked(path_box, list_widget):
                         search_term_counts[search_term] += 1
                     else:
                         search_term_counts[search_term] = 1
-                    #list_widget.addItem(search_term)
-        
+
         search_terms = [(term, count) for term, count in search_term_counts.items()]
         deviceInfoList = searchPLCInfoNVD(search_terms)  # Pass the list of search terms with counts
+        deviceInfoList = [(cpe, cves, "group") for cpe, cves in deviceInfoList]
 
         # Populate the group result list with CPEs
         list_widget.clear()
-        for cpe, _ in deviceInfoList:
+        for cpe, _, _ in deviceInfoList:
             list_widget.addItem(cpe)
 
 def show_error_message(message):
@@ -90,7 +100,7 @@ def entry_box_changed(entry_box):
 def create_individual_widgets(inner_layout):
     import_button = QPushButton("Import")
     import_button.setFixedSize(BUTTON_WIDTH, ELEMENT_HEIGHT)
-    import_button.setStyleSheet("background-color: #ADD8E6; font-size: 14px; padding: 5px;")
+    import_button.setStyleSheet("background-color: #ADD8E6; font-size: 14px; padding: 5px; border: none;")
     inner_layout.addWidget(import_button)
 
     entry_box = QLineEdit()
@@ -117,7 +127,7 @@ def create_individual_widgets(inner_layout):
 def create_group_widgets(inner_layout):
     load_button = QPushButton("Load")
     load_button.setFixedSize(BUTTON_WIDTH, ELEMENT_HEIGHT)
-    load_button.setStyleSheet("background-color: #ADD8E6; font-size: 14px; padding: 5px;")
+    load_button.setStyleSheet("background-color: #ADD8E6; font-size: 14px; padding: 5px; border: none;")
     inner_layout.addWidget(load_button)
 
     path_box = QLineEdit()
@@ -148,19 +158,34 @@ def showCVEPopup(cpe):
     layout = QVBoxLayout()
     dialog.setLayout(layout)
 
-    list_widget = QListWidget()
-    cve_list = [cve for device, cves in deviceInfoList if device == cpe for cve in cves]
-    cve_ids = [cve.id for cve in cve_list]
-    list_widget.addItems(cve_ids)
-    layout.addWidget(list_widget)
+    for device, cves, _ in deviceInfoList:
+        if device == cpe:
+            for cve, active in cves:
+                checkbox = QCheckBox(cve.id)
+                checkbox.setChecked(active)
+                checkbox.toggled.connect(lambda checked, cve=cve: toggleCVE(cpe, cve, checked))
+                layout.addWidget(checkbox)
 
     close_button = QPushButton("Close")
-    close_button.setStyleSheet("background-color: blue; border-radius: 3px; color: white;")
+    close_button.setStyleSheet("background-color: #ADD8E6; border: none; color: white;")
     layout.addWidget(close_button)
 
     close_button.clicked.connect(dialog.accept)
 
     dialog.exec()
+
+def toggleCVE(cpe, cve, checked):
+    for device, cves, _ in deviceInfoList:
+        if device == cpe:
+            for i in range(len(cves)):
+                if cves[i][0] == cve:
+                    cves[i] = (cve, checked)
+
+def printSummary():
+    num_cpes = len(deviceInfoList)
+    num_active_cves = sum(len([cve for cve, active in cves if active]) for _, cves, _ in deviceInfoList)
+    num_inactive_cves = sum(len([cve for cve, active in cves if not active]) for _, cves, _ in deviceInfoList)
+    print(f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}")
 
 def main():
     app = QApplication(sys.argv)
@@ -221,7 +246,22 @@ def main():
     horizontal_line.setFixedHeight(2)
     top_layout.addWidget(horizontal_line)
 
+    # Button to print summary
+    summary_button = QPushButton("Print Summary")
+    summary_button.setFixedSize(BUTTON_WIDTH, ELEMENT_HEIGHT)
+    summary_button.setStyleSheet("background-color: #ADD8E6; font-size: 14px; padding: 5px; border: none;")
+    summary_button.clicked.connect(printSummary)
+
+    # Summary button container
+    summary_container = QFrame()
+    summary_layout = QVBoxLayout(summary_container)
+    summary_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+    summary_layout.setSpacing(SPACING)
+    summary_layout.setContentsMargins(0, 0, 0, 0)
+    summary_layout.addWidget(summary_button)
+
     main_layout.addWidget(top_container, alignment=Qt.AlignTop | Qt.AlignLeft)
+    main_layout.addWidget(summary_container, alignment=Qt.AlignTop | Qt.AlignLeft)
 
     window.setCentralWidget(main_container)
     window.show()
