@@ -187,6 +187,12 @@ def printSummary():
     num_inactive_cves = sum(len([cve for cve, active in cves if not active]) for _, cves, _ in deviceInfoList)
     print(f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}")
 
+def getValues():
+    num_cpes = len(deviceInfoList)
+    num_active_cves = sum(len([cve for cve, active in cves if active]) for _, cves, _ in deviceInfoList)
+    num_inactive_cves = sum(len([cve for cve, active in cves if not active]) for _, cves, _ in deviceInfoList)
+    return f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}"
+
 def main():
     app = QApplication(sys.argv)
     window = QMainWindow()
@@ -266,6 +272,78 @@ def main():
     window.setCentralWidget(main_container)
     window.show()
     sys.exit(app.exec())
+
+def setup_ui(container):
+    main_layout = QVBoxLayout(container)
+    main_layout.setSpacing(SPACING)
+    main_layout.setContentsMargins(MARGIN, MARGIN, MARGIN, MARGIN)
+
+    # Top UI container
+    top_container = QFrame()
+    top_layout = QVBoxLayout(top_container)
+    top_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+    top_layout.setSpacing(SPACING)
+    top_layout.setContentsMargins(0, 0, 0, 0)
+
+    # Inner UI container
+    inner_container = QFrame()
+    inner_layout = QHBoxLayout(inner_container)
+    inner_layout.setSpacing(SPACING)
+    inner_layout.setContentsMargins(0, 0, 0, 0)
+
+    # Dropdown menu
+    dropdown = QComboBox()
+    dropdown.addItems(["Individual", "Group"])
+    dropdown.setFixedSize(DROPDOWN_WIDTH, ELEMENT_HEIGHT)
+    dropdown.setStyleSheet("font-size: 14px; padding: 5px;")
+    inner_layout.addWidget(dropdown)
+
+    # Vertical line
+    vertical_line = QFrame()
+    vertical_line.setFrameShape(QFrame.VLine)
+    vertical_line.setStyleSheet("background-color: grey;")
+    vertical_line.setFixedHeight(ELEMENT_HEIGHT)
+    inner_layout.addWidget(vertical_line)
+
+    # Create individual and group widgets
+    individual_widgets = create_individual_widgets(inner_layout)
+    group_widgets = create_group_widgets(inner_layout)
+
+    # Initially hide group widgets
+    for widget in group_widgets:
+        widget.hide()
+
+    # Connect signals and slots
+    dropdown.currentIndexChanged.connect(
+        lambda: dropdown_changed(dropdown, individual_widgets, group_widgets, individual_widgets[-1], group_widgets[-1])
+    )
+
+    # Add inner container to top layout
+    top_layout.addWidget(inner_container)
+
+    # Horizontal line
+    horizontal_line = QFrame()
+    horizontal_line.setFrameShape(QFrame.HLine)
+    horizontal_line.setStyleSheet("background-color: grey;")
+    horizontal_line.setFixedHeight(2)
+    top_layout.addWidget(horizontal_line)
+
+    # # Button to print summary
+    # summary_button = QPushButton("Print Summary")
+    # summary_button.setFixedSize(BUTTON_WIDTH, ELEMENT_HEIGHT)
+    # summary_button.setStyleSheet("background-color: #ADD8E6; font-size: 14px; padding: 5px; border: none;")
+    # summary_button.clicked.connect(printSummary)
+
+    # # Summary button container
+    # summary_container = QFrame()
+    # summary_layout = QVBoxLayout(summary_container)
+    # summary_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+    # summary_layout.setSpacing(SPACING)
+    # summary_layout.setContentsMargins(0, 0, 0, 0)
+    # summary_layout.addWidget(summary_button)
+
+    main_layout.addWidget(top_container, alignment=Qt.AlignTop | Qt.AlignLeft)
+    # main_layout.addWidget(summary_container, alignment=Qt.AlignTop | Qt.AlignLeft)
 
 if __name__ == "__main__":
     main()

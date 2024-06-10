@@ -145,12 +145,22 @@ def main():
     
     dataContainer = QFrame()
     dataContainerLayout = QVBoxLayout(dataContainer)
-    dataContainerLayout.setAlignment(Qt.AlignHCenter)
+    dataContainerLayout.setAlignment(Qt.AlignLeft)
     dataContainerLayout.addWidget(dataFrame)
     leftLayout.addWidget(dataContainer)
 
+    rightLayout = QVBoxLayout()
+    rightLayout.setSpacing(10)
+    rightLayout.setAlignment(Qt.AlignTop)
+    
+    rightContainer = QFrame()
+    rightContainerLayout = QVBoxLayout(rightContainer)
+    rightContainerLayout.setAlignment(Qt.AlignLeft)
+    rightContainerLayout.addWidget(impactFrame)
+    rightLayout.addWidget(rightContainer)
+
     mainLayout.addLayout(leftLayout)
-    mainLayout.addWidget(impactFrame)
+    mainLayout.addLayout(rightLayout)
     
     container = QWidget()
     container.setLayout(mainLayout)
@@ -167,6 +177,54 @@ def main():
 
     window.show()
     sys.exit(app.exec())
+
+def setup_ui(container):
+    impactFrame = ImpactCategories()
+    dataFrame = DataCategories()
+    policyFrame = PolicyCategories()
+    
+    mainLayout = QHBoxLayout()
+    mainLayout.setSpacing(10)
+    mainLayout.setContentsMargins(0, 0, 0, 0)
+    mainLayout.setAlignment(Qt.AlignTop)
+
+    leftLayout = QVBoxLayout()
+    leftLayout.setSpacing(10)
+    leftLayout.setAlignment(Qt.AlignTop)
+    
+    leftLayout.addWidget(policyFrame)
+    
+    dataContainer = QFrame()
+    dataContainerLayout = QVBoxLayout(dataContainer)
+    dataContainerLayout.setAlignment(Qt.AlignLeft)
+    dataContainerLayout.addWidget(dataFrame)
+    leftLayout.addWidget(dataContainer)
+
+    rightLayout = QVBoxLayout()
+    rightLayout.setSpacing(10)
+    rightLayout.setAlignment(Qt.AlignTop)
+    
+    rightContainer = QFrame()
+    rightContainerLayout = QVBoxLayout(rightContainer)
+    rightContainerLayout.setAlignment(Qt.AlignLeft)
+    rightContainerLayout.addWidget(impactFrame)
+    rightLayout.addWidget(rightContainer)
+
+    mainLayout.addLayout(leftLayout)
+    mainLayout.addLayout(rightLayout)
+    
+    container.setLayout(mainLayout)
+
+    # # Reintroduced commented-out code
+    # printButton = QPushButton("Print Values")
+    # printButton.setFixedHeight(30)
+    # printButton.setFixedWidth(100)
+    # printButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    # printButton.setToolTip("This button prints the values list.")
+    # printButton.clicked.connect(lambda: print(values))
+
+    # mainLayout.addWidget(printButton, alignment=Qt.AlignBottom | Qt.AlignRight)
+
 
 if __name__ == "__main__":
     main()
