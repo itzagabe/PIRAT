@@ -183,8 +183,8 @@ def toggleCVE(cpe, cve, checked):
 
 def printSummary():
     num_cpes = len(deviceInfoList)
-    num_active_cves = sum(len([cve for cve, active in cves if active]) for _, cves, _ in deviceInfoList)
-    num_inactive_cves = sum(len([cve for cve, active in cves if not active]) for _, cves, _ in deviceInfoList)
+    num_active_cves = sum(len([cve for cve, active in cves if active]) for _, cves in deviceInfoList)
+    num_inactive_cves = sum(len([cve for cve, active in cves if not active]) for _, cves in deviceInfoList)
     print(f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}")
 
 def getValues():

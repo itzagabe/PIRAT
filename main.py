@@ -1,121 +1,83 @@
-import sys
-from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QComboBox, QFrame, QSizePolicy
-)
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QPushButton, QLabel, QSizePolicy, QSlider
 from PySide6.QtCore import Qt
-from ImportDevices import *
-from newUI import *
+import sys
+from ImpactUI import setupTopRight
+from ImpactUI import setupImpact
+from newUI import values as severityValues
+from UpdatedImportDevices import setupImportDevices
+from ImportDevices import getValues
 
-def create_top_container():
-    top_container = QFrame()
-    top_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    top_layout = QVBoxLayout(top_container)
-    top_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-    top_layout.setSpacing(10)
-    top_layout.setContentsMargins(0, 0, 0, 0)
+results_window = None
 
-    inner_container = create_inner_container()
-    top_layout.addWidget(inner_container)
+def create_results_window(results):
+    window = QMainWindow()
+    window.setWindowTitle("Results")
+    window.setGeometry(100, 100, 400, 300)
+    
+    container = QWidget()
+    layout = QVBoxLayout(container)
 
-    horizontal_line = QFrame()
-    horizontal_line.setFrameShape(QFrame.HLine)
-    horizontal_line.setStyleSheet("background-color: grey;")
-    horizontal_line.setFixedHeight(2)
-    top_layout.addWidget(horizontal_line)
+    label = QLabel(results)
+    layout.addWidget(label)
+    
+    container.setLayout(layout)
+    window.setCentralWidget(container)
+    return window
 
-    return top_container
+def show_results():
+    global results_window
+    results = str(severityValues) + "\n"  # Replace with actual results
+    results += getValues()
+    results_window = create_results_window(results)
+    results_window.show()
 
-def create_inner_container():
-    inner_container = QFrame()
-    inner_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    inner_layout = QHBoxLayout(inner_container)
-    inner_layout.setSpacing(10)
-    inner_layout.setContentsMargins(0, 0, 0, 0)
+def create_main_window():
+    window = QMainWindow()
+    window.setWindowTitle("Main UI")
 
-    dropdown = QComboBox()
-    dropdown.addItems(["Individual", "Group"])
-    dropdown.setFixedSize(150, 30)
-    dropdown.setStyleSheet("font-size: 14px; padding: 5px;")
-    inner_layout.addWidget(dropdown)
+    container = QWidget()
+    main_layout = QVBoxLayout(container)
+    main_layout.setAlignment(Qt.AlignTop)  # Align the main layout to the top
 
-    vertical_line = QFrame()
-    vertical_line.setFrameShape(QFrame.VLine)
-    vertical_line.setStyleSheet("background-color: grey;")
-    vertical_line.setFixedHeight(30)
-    inner_layout.addWidget(vertical_line)
+    # Create a top frame and set up the top UI in it
+    top_frame = QFrame()
+    top_layout = QHBoxLayout(top_frame)
 
-    individual_widgets = create_individual_widgets(inner_layout)
-    group_widgets = create_group_widgets(inner_layout)
+    left_container = QFrame()
+    setupImportDevices(left_container)
+    top_layout.addWidget(left_container)
 
-    for widget in group_widgets:
-        widget.hide()
+    right_container = QFrame()
+    slider1 = QSlider(Qt.Horizontal)
 
-    dropdown.currentIndexChanged.connect(
-        lambda: dropdown_changed(dropdown, individual_widgets, group_widgets, individual_widgets[-1], group_widgets[-1])
-    )
+    setupTopRight(right_container)
+    top_layout.addWidget(right_container)
 
-    return inner_container
+    top_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    main_layout.addWidget(top_frame, alignment=Qt.AlignTop)
 
-def create_bottom_container():
-    bottom_container = QWidget()
-    bottom_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    bottom_layout = QHBoxLayout(bottom_container)
-    bottom_layout.setSpacing(10)
-    bottom_layout.setContentsMargins(0, 0, 0, 0)
-    bottom_layout.setAlignment(Qt.AlignTop)
+    # Create a bottom frame and set up the right UI in it
+    bottom_frame = QFrame()
+    setupImpact(bottom_frame)
+    bottom_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+    main_layout.addWidget(bottom_frame, alignment=Qt.AlignTop)
 
-    impactFrame = ImpactCategories()
-    impactFrame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    # Create a button that spans the width of the main window
+    print_button = QPushButton("Print Results")
+    print_button.setFixedHeight(30)
+    print_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    print_button.setToolTip("This button prints the results.")
+    print_button.clicked.connect(show_results)
 
-    dataFrame = DataCategories()
-    dataFrame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    main_layout.addWidget(print_button, alignment=Qt.AlignBottom | Qt.AlignHCenter)
 
-    policyFrame = PolicyCategories()
-    policyFrame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-    leftLayout = QVBoxLayout()
-    leftLayout.setSpacing(10)
-    leftLayout.setAlignment(Qt.AlignTop)
-    leftLayout.addWidget(policyFrame)
-
-    dataContainer = QFrame()
-    dataContainerLayout = QVBoxLayout(dataContainer)
-    dataContainerLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-    dataContainerLayout.addWidget(dataFrame)
-    leftLayout.addWidget(dataContainer)
-
-    bottom_layout.addLayout(leftLayout)
-    bottom_layout.addWidget(impactFrame)
-
-    bottom_container.setLayout(bottom_layout)
-    return bottom_container
+    container.setLayout(main_layout)
+    window.setCentralWidget(container)
+    return window
 
 def main():
     app = QApplication(sys.argv)
-    window = QMainWindow()
-    window.setWindowTitle("Combined UI")
-
-    main_container = QWidget()
-    main_layout = QVBoxLayout(main_container)
-    main_layout.setSpacing(10)
-    main_layout.setContentsMargins(10, 10, 10, 10)
-
-    top_container = create_top_container()
-    main_layout.addWidget(top_container, alignment=Qt.AlignTop | Qt.AlignLeft)
-
-    bottom_container = create_bottom_container()
-    main_layout.addWidget(bottom_container, alignment=Qt.AlignTop | Qt.AlignLeft)
-
-    print_button = QPushButton("Print Values")
-    print_button.setFixedHeight(30)
-    print_button.setFixedWidth(100)
-    print_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-    print_button.setToolTip("This button prints the values list.")
-    print_button.clicked.connect(lambda: print("Values printed"))
-    main_layout.addWidget(print_button, alignment=Qt.AlignTop | Qt.AlignLeft)
-
-    window.setCentralWidget(main_container)
+    window = create_main_window()
     window.show()
     sys.exit(app.exec())
 

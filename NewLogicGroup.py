@@ -9,7 +9,7 @@ notFoundDevices = []
 refineSearchDevices = []
 timeoutTimer = 5
 
-def searchPLCInfoNVD(searchTermList):
+def searchPLCInfoNVD(searchTermList, refinedSearch = True):
     global officialCPE, notFoundDevices, refineSearchDevices, timeoutTimer
     # Clear global lists
     officialCPE = []
@@ -28,10 +28,13 @@ def searchPLCInfoNVD(searchTermList):
         if not event.wait(timeoutTimer):  # 20 seconds timeout
             refineSearchDevices.append(cpeTerm)
             continue
+        
+        if not refinedSearch:
+            cpeList = [cpe for cpe in cpeList if "firmware" not in cpe.cpeName] # remove firmware from search
 
         if len(cpeList) == 0:
             notFoundDevices.append(cpeTerm)
-        elif len(cpeList) == 1:
+        elif len(cpeList) == 1 or not refinedSearch:
             officialCPE.append((cpeList[0].cpeName, count))
         else:
             selected_cpe = chooseWhichCPE(cpeList, cpeTerm, idx, listLength, count)
@@ -53,8 +56,14 @@ def searchPLCInfoNVD(searchTermList):
     return cpe_cve_list
 
 def call_searchNVDCPE(cpeTerm, cpeList, event):
-    cpeList.extend(searchNVDCPE(cpeTerm))
-    event.set()
+    try:
+        result = searchNVDCPE(cpeTerm)
+        if result:
+            cpeList.extend(result)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        event.set()
 
 def chooseWhichCPE(cpeList, cpeTerm, idx, listLength, count):
     app = QApplication.instance() or QApplication([])
