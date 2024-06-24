@@ -16,9 +16,6 @@ def toggle_detailed_search(state):
     detailed_search = bool(state)
     print(state)
 
-def empty_method():
-    pass
-
 def show_error_popup(message):
     msg_box = QMessageBox()
     msg_box.setIcon(QMessageBox.Warning)

@@ -64,7 +64,7 @@ def CatLayout(mainLayout, buttonGroupsList, categoryList, severityList):
             toggleButton.setChecked(False)
             toggleButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
             toggleButton.setArrowType(Qt.RightArrow)
-            toggleButton.toggled.connect(lambda checked, btn=toggleButton, cat=categoryName, subs=subcategories: ToggleSubcat(checked, btn, cat, subs, activeItems, categoryList, buttonGroupsList))
+            toggleButton.toggled.connect(lambda checked, btn=toggleButton, cat=categoryName, subs=subcategories, label=frameLabels: ToggleSubcat(checked, btn, cat, subs, activeItems, categoryList, buttonGroupsList, label))
             categoryLayout.addWidget(toggleButton)
         else:
             dropdownSpacer = QWidget()
@@ -105,6 +105,29 @@ def CatLayout(mainLayout, buttonGroupsList, categoryList, severityList):
 
     return activeItems
 
+def ToggleSubcat(checked, button, categoryName, subcategories, activeItems, categoryList, buttonGroupsList, label):
+    if checked:
+        if categoryName in activeItems:
+            activeItems.remove(categoryName)
+        activeItems.extend(f"{categoryName} - {sub}" for sub in subcategories if f"{categoryName} - {sub}" not in activeItems)
+        # Disable main category buttons and grey out the text
+        for buttonGroups in buttonGroupsList:
+            for button in buttonGroups[categoryName.strip()].buttons():
+                button.setDisabled(True)
+        label.setStyleSheet("QLabel { color: grey; }")  # Grey out the parent label text
+    else:
+        activeItems.append(categoryName)
+        for sub in subcategories:
+            subItem = f"{categoryName} - {sub}"
+            if subItem in activeItems:
+                activeItems.remove(subItem)
+        # Enable main category buttons and ungrey the text
+        for buttonGroups in buttonGroupsList:
+            for button in buttonGroups[categoryName.strip()].buttons():
+                button.setDisabled(False)
+        label.setStyleSheet("QLabel { color: black; }")  # Reset the label text color
+    ReorderActiveItems(activeItems, categoryList)
+
 def SubcatLayout(subcategory, severityList, buttonGroupsList, parentCategory):
     subcategoryLayout = QHBoxLayout()
 
@@ -141,27 +164,6 @@ def SubcatLayout(subcategory, severityList, buttonGroupsList, parentCategory):
         subcategoryLayout.addWidget(frame)
 
     return subcategoryLayout
-
-def ToggleSubcat(checked, button, categoryName, subcategories, activeItems, categoryList, buttonGroupsList):
-    if checked:
-        if categoryName in activeItems:
-            activeItems.remove(categoryName)
-        activeItems.extend(f"{categoryName} - {sub}" for sub in subcategories if f"{categoryName} - {sub}" not in activeItems)
-        # Disable main category buttons
-        for buttonGroups in buttonGroupsList:
-            for button in buttonGroups[categoryName.strip()].buttons():
-                button.setDisabled(True)
-    else:
-        activeItems.append(categoryName)
-        for sub in subcategories:
-            subItem = f"{categoryName} - {sub}"
-            if subItem in activeItems:
-                activeItems.remove(subItem)
-        # Enable main category buttons
-        for buttonGroups in buttonGroupsList:
-            for button in buttonGroups[categoryName.strip()].buttons():
-                button.setDisabled(False)
-    ReorderActiveItems(activeItems, categoryList)
 
 def ReorderActiveItems(activeItems, categoryList):
     orderedActiveItems = []
