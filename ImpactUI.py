@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget,
-    QFrame, QSizePolicy, QToolButton, QLabel, QSlider, QSpinBox, QComboBox
+    QFrame, QSizePolicy, QToolButton, QLabel, QSlider, QSpinBox, QComboBox, QSpacerItem
 )
 from PySide6.QtCore import Qt
 from ImpactLogic import *
@@ -68,20 +68,37 @@ def CreateGenericLayout(severityList, categoryList, numButtonGroups, updateFunc,
     return uiFrame
 
 def UpdateImpactLayout(returnValue, resultButton):
-    returnValue2 = sum(val[3] for val in returnValue) / len(returnValue) if returnValue else 0
+    from collections import defaultdict
+    
+    # Group scores by category
+    category_scores = defaultdict(list)
+    for group, category, rating, score in returnValue:
+        category_scores[category].append(score)
+    
+    # Multiply scores for each category
+    multiplied_scores = []
+    for scores in category_scores.values():
+        product = 1
+        for score in scores:
+            product *= score
+        multiplied_scores.append(product)
+    
+    # Calculate the final average severity score
+    impactExtent = sum(multiplied_scores) / len(multiplied_scores) if multiplied_scores else 0
+    
     colors = [(0, "#bababa"), (0.3, low), (0.6, medium), (1, high)]
     
     for i in range(len(colors) - 1):
-        if colors[i][0] <= returnValue2 <= colors[i + 1][0]:
-            factor = (returnValue2 - colors[i][0]) / (colors[i + 1][0] - colors[i][0])
+        if colors[i][0] <= impactExtent <= colors[i + 1][0]:
+            factor = (impactExtent - colors[i][0]) / (colors[i + 1][0] - colors[i][0])
             color = InterpolateColour(colors[i][1], colors[i + 1][1], factor)
             break
     else:
         color = colors[-1][1]
 
-    resultButton.setText(f"Average Severity: {returnValue2:.2f}")
+    resultButton.setText(f"Impact Extent: {impactExtent:.2f}")
     resultButton.setStyleSheet(f"background-color: {color}; border-radius: 3px; color: black;")
-    values[0] = round(returnValue2, 2)
+    values[0] = round(impactExtent, 2)
 
 def UpdateDataLayout(returnValue, resultButton):
     severityLabel, severityValue = MapDataCategories(returnValue)
@@ -118,7 +135,7 @@ def DataCategories():
     return CreateGenericLayout(severityList, ['Data Rate', 'Publishers'], 1, UpdateDataLayout, "#90EE90", tooltips, True)
 
 def PolicyCategories():
-    severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high)]
+    severityList = [("None", 0.2, "#bababa"), ("Low", 0.4, low), ("Medium", 0.6, medium), ("High", 0.9, high)] # CHANGED None and High
     tooltips = {"Policy Strength": "How strong are security-related procedural policies and guidelines"}
 
     return CreateGenericLayout(severityList, ['Policy Strength'], 1, UpdatePolicyLayout, "#bababa", tooltips, False)
@@ -216,11 +233,6 @@ def setup_ui(container):
     container.setLayout(mainLayout)
 
 #### I added the slider logic here cause it was easier
-global time_range1_value, time_unit1, time_range2_value, time_unit2
-time_range1_value = 0
-time_unit1 = ""
-time_range2_value = 0
-time_unit2 = ""
 
 def createTimeRangeInput(label_text, update_function):
     timeRangeLayout = QVBoxLayout()
@@ -282,18 +294,40 @@ def setupTopRight(container):
 
     container.setLayout(leftLayout)
 
+# Define global variable
+global timeDifference
+timeDifference = 0
+
+# Define non-global variables to keep track of time ranges
+timeRange1 = 1
+timeRange2 = 1
 
 def updateTimeRange1(value, unit):
-    global time_range1_value, time_unit1
-    time_range1_value = value
-    time_unit1 = unit
-    print(f"Time Range 1: {time_range1_value} {time_unit1}")
+    global timeRange1
+    timeRange1 = convertToHours(value, unit)
+    updateTimeDifference()
+    #print(f"Time Range 1: {time_range1_hours} hours")
 
 def updateTimeRange2(value, unit):
-    global time_range2_value, time_unit2
-    time_range2_value = value
-    time_unit2 = unit
-    print(f"Time Range 2: {time_range2_value} {time_unit2}")
+    global timeRange2
+    timeRange2 = convertToHours(value, unit)
+    updateTimeDifference()
+    #print(f"Time Range 2: {time_range2_hours} hours")
+
+def updateTimeDifference():
+    global timeDifference
+    timeDifference = abs(timeRange2 - timeRange1)
+    #print(f"Time Difference: {timeDifference} hours")
+    return timeRange1, timeRange2
+
+def convertToHours(value, unit):
+    if unit == "hours":
+        return value
+    elif unit == "days":
+        return value * 24
+    elif unit == "months":
+        return value * 30 * 24  # Approximate month as 30 days
+    
 
 def setupImpact(container):
     impactFrame = ImpactCategories()
@@ -302,15 +336,34 @@ def setupImpact(container):
     rightLayout.setSpacing(10)
     rightLayout.setAlignment(Qt.AlignTop)
 
-    impactText = "Choose the shortest and longest acceptable cryptoperiod for your given environment.\n"
+    impactText = "Choose the impact of the group data in the event of a compromise. Importance measures how critical a function is to your \norganization's success. Extent measures the actual consequences to a function in the event of an incident.\n"
     impactLabel = QLabel(impactText)
     impactLabel.setAlignment(Qt.AlignLeft)
     rightLayout.addWidget(impactLabel)
 
-    impactGroupText = "                                  Importance                                                            Extent"
-    impactGroupLabel = QLabel(impactGroupText)
-    impactGroupLabel.setAlignment(Qt.AlignCenter)
-    rightLayout.addWidget(impactGroupLabel)
+    # Create a horizontal layout for the Importance and Extent labels
+    labelLayout = QHBoxLayout()
+
+    # Spacer item to the left of Importance label with a fixed width
+    spacer_before_importance = QSpacerItem(261, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
+    labelLayout.addItem(spacer_before_importance)
+
+    # Importance label
+    importanceLabel = QLabel("Importance")
+    importanceLabel.setToolTip("Temp")
+    labelLayout.addWidget(importanceLabel)
+
+    # Spacer item to the left of Extent label with a fixed width
+    spacer_before_extent = QSpacerItem(73, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
+    labelLayout.addItem(spacer_before_extent)
+
+    # Extent label
+    extentLabel = QLabel("Extent")
+    extentLabel.setToolTip("Temp2")
+    labelLayout.addWidget(extentLabel)
+
+    # Add the label layout to the right layout
+    rightLayout.addLayout(labelLayout)
     
     rightContainer = QFrame()
     rightContainerLayout = QVBoxLayout(rightContainer)
@@ -319,7 +372,6 @@ def setupImpact(container):
     rightLayout.addWidget(rightContainer)
 
     container.setLayout(rightLayout)
-
 
     # # Reintroduced commented-out code
     # printButton = QPushButton("Print Values")

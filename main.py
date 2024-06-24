@@ -1,13 +1,13 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QPushButton, QLabel, QSizePolicy, QSlider
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QPushButton, QLabel, QSizePolicy, QSlider, QLineEdit
 from PySide6.QtCore import Qt
 import sys
-from ImpactUI import setupTopRight
-from ImpactUI import setupImpact
-from newUI import values as severityValues
-from UpdatedImportDevices import setupImportDevices
-from ImportDevices import getValues
+from ImpactUI import setupTopRight, setupImpact, updateTimeDifference
+from ImpactUI import values as IE_TI_ProSucc
+from ImpactUI import timeDifference
+from ImportDevices import setupImportDevices
 
 results_window = None
+results_text_box = None
 
 def create_results_window(results):
     window = QMainWindow()
@@ -25,11 +25,41 @@ def create_results_window(results):
     return window
 
 def show_results():
-    global results_window
-    results = str(severityValues) + "\n"  # Replace with actual results
-    results += getValues()
-    results_window = create_results_window(results)
-    results_window.show()
+    def displayTimeDifference(hours):
+        months = hours // (30 * 24)
+        hours %= (30 * 24)
+        days = hours // 24
+        hours %= 24
+        minutes = (hours - int(hours)) * 60
+        hours = int(hours)
+
+        result = []
+        if months > 0:
+            result.append(f"{months} month{'s' if months > 1 else ''}")
+        if days > 0 or (months > 0 and (hours > 0 or minutes > 0)):
+            result.append(f"{days} day{'s' if days > 1 else ''}")
+        if hours > 0 or (days > 0 or months > 0) and minutes > 0:
+            result.append(f"{hours} hour{'s' if hours > 1 else ''}")
+        if minutes > 0 or hours > 0 or days > 0 or months > 0:
+            result.append(f"{int(minutes)} minute{'s' if int(minutes) != 1 else ''}")
+
+        return ", ".join(result)
+
+    probability = IE_TI_ProSucc[2]
+    impact = (1 - IE_TI_ProSucc[0] * IE_TI_ProSucc[1])
+    finalRisk = probability * impact
+    timeRange1, timeRange2 = updateTimeDifference()
+
+    cryptoperiod = timeRange1 + (finalRisk * (timeRange2 - timeRange1))
+    cryptoperiod_display = displayTimeDifference(cryptoperiod)
+
+    print(f'Probability of risk: {round(probability, 2)}')
+    print(f'Impact: {round(impact, 2)}')
+    print(f'Final Risk: {round(finalRisk, 2)}')
+    print(f'Recommended cryptoperiod: {cryptoperiod_display}\n')
+
+    if results_text_box:
+        results_text_box.setText(f"Recommended cryptoperiod: {cryptoperiod_display}")
 
 def create_main_window():
     window = QMainWindow()
@@ -62,14 +92,27 @@ def create_main_window():
     bottom_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
     main_layout.addWidget(bottom_frame, alignment=Qt.AlignTop)
 
-    # Create a button that spans the width of the main window
+    # Create a horizontal layout for the print button and text box
+    button_text_layout = QHBoxLayout()
+
+    # Create the print button
     print_button = QPushButton("Print Results")
     print_button.setFixedHeight(30)
     print_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     print_button.setToolTip("This button prints the results.")
     print_button.clicked.connect(show_results)
+    button_text_layout.addWidget(print_button, 1)
 
-    main_layout.addWidget(print_button, alignment=Qt.AlignBottom | Qt.AlignHCenter)
+    # Create the uneditable text box
+    global results_text_box
+    results_text_box = QLineEdit()
+    results_text_box.setReadOnly(True)
+    results_text_box.setFixedHeight(30)
+    results_text_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    button_text_layout.addWidget(results_text_box, 5)
+
+    # Add the horizontal layout to the main layout
+    main_layout.addLayout(button_text_layout)
 
     container.setLayout(main_layout)
     window.setCentralWidget(container)
