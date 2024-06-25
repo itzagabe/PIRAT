@@ -333,7 +333,6 @@ def show_help_window(selection):
 
 def getImportValues():
     if not deviceInfoList:
-        print('empty')
         return 0, False
     # Initialize lists for active and inactive CVEs in the desired format
     active_cves_list = []

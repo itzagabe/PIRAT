@@ -21,10 +21,10 @@ from nvdapikey import key
 
 # Find a way to pretty print this data
 # Find a way to efficiently search for.
-delay = 5
+delay = 10
 
 def searchNVDCPE(model):
-    print("searching")
+    print(f"searching {model}")
     try:
         if model.startswith("cpe:"):
             model = model[:-2]
@@ -38,7 +38,7 @@ def searchNVDCPE(model):
 
 
 def searchNVD(cpe):
-    print('searching cves')
+    print(f'searching cves for {cpe}')
     formatCPE = str(cpe)
     # find a way to securely store the key somewhere
     cveList = nvdlib.searchCVE(cpeName = formatCPE, key= key, delay = delay)#, keywordExactMatch= True) #added exact match

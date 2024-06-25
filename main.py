@@ -1,26 +1,46 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QPushButton, QLabel, QSizePolicy, QSlider, QLineEdit, QMessageBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QPushButton, QLabel, QSizePolicy, QSlider, QLineEdit, QMessageBox, QCheckBox
 from PySide6.QtCore import Qt
 import sys
 from ImpactUI import setupTopRight, setupImpact, updateTimeDifference
-from ImpactUI import values as IE_TI_ProSucc
+from ImpactUI import values
 from ImpactUI import timeDifference
 from ImportDevices import setupImportDevices, getImportValues
 
 results_window = None
 results_text_box = None
+show_message_box = True #do not show again
 
 def EmptyImport(variable):
-    if not variable:
-        reply = QMessageBox.question(
-            None, 
-            'No Imported Devices',
-            f"Without any imported devices, the calculation will assume the worst case scenario in which the probability of an exploit is guaranteed. Do you want to continue?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
+    global show_message_box
+    if not variable and show_message_box:
+        # Create the message box
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setText("Without any imported devices, the calculation will assume the worst case scenario in which the probability of an exploit is guaranteed. Do you want to continue?")
+        msg_box.setWindowTitle("No Imported Devices")
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setDefaultButton(QMessageBox.No)
+        
+        # Create a widget to hold the text and the checkbox
+        main_widget = QWidget()
+        main_layout = QVBoxLayout(main_widget)
+        
+        # Create and add the checkbox to the main layout
+        checkbox = QCheckBox("Do not show again")
+        main_layout.addWidget(checkbox)
+        
+        # Set the custom widget as the main content of the message box
+        msg_box.layout().addWidget(main_widget, 1, 0, 1, msg_box.layout().columnCount())
+
+        # Execute the message box
+        reply = msg_box.exec()
+        
+        # Check if the "Do not show again" checkbox is checked
+        if checkbox.isChecked():
+            show_message_box = False
+
         return reply == QMessageBox.Yes
     return True
-
 
 def show_results():
     deviceProbability, isNotEmpty = getImportValues()
@@ -35,22 +55,28 @@ def show_results():
         minutes = (hours - int(hours)) * 60
         hours = int(hours)
 
+        months = int(months)
+        days = int(days)
+        hours = int(hours)
+        minutes = int(minutes)
+
         result = []
         if months > 0:
-            result.append(f"{months} month{'s' if months > 1 else ''}")
+          result.append(f"{months} month{'s' if months != 1 else ''}")
         if days > 0 or (months > 0 and (hours > 0 or minutes > 0)):
-            result.append(f"{days} day{'s' if days > 1 else ''}")
+            result.append(f"{days} day{'s' if days != 1 else ''}")
         if hours > 0 or (days > 0 or months > 0) and minutes > 0:
-            result.append(f"{hours} hour{'s' if hours > 1 else ''}")
+            result.append(f"{hours} hour{'s' if hours != 1 else ''}")
         if minutes > 0 or hours > 0 or days > 0 or months > 0:
-            result.append(f"{int(minutes)} minute{'s' if int(minutes) != 1 else ''}")
+            result.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+
 
         return ", ".join(result)
 
     if isNotEmpty:
-        print('not empty')
-    probability = IE_TI_ProSucc[2]
-    impact = (1 - IE_TI_ProSucc[0] * IE_TI_ProSucc[1])
+        probability = deviceProbability * values.policy
+    probability = values.policy
+    impact = (1 - values.impact * values.data)
     finalRisk = probability * impact
     timeRange1, timeRange2 = updateTimeDifference()
 
@@ -59,7 +85,7 @@ def show_results():
 
     #getValues()
     print(f'Probability of risk: {round(probability, 2)}')
-    print(f'Impact: {round(impact, 2)}')
+    print(f'Impact: {round(1 - impact, 2)}')
     print(f'Final Risk: {round(finalRisk, 2)}')
     print(f'Recommended cryptoperiod: {cryptoperiod_display}\n')
 

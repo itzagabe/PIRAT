@@ -7,7 +7,7 @@ import datetime
 officialCPE = []
 notFoundDevices = []
 refineSearchDevices = []
-timeoutTimer = 5
+timeoutTimer = 10
 
 def searchPLCInfoNVD(searchTermList, refinedSearch = True):
     global officialCPE, notFoundDevices, refineSearchDevices, timeoutTimer
@@ -25,7 +25,7 @@ def searchPLCInfoNVD(searchTermList, refinedSearch = True):
         event = threading.Event()
         threading.Thread(target=call_searchNVDCPE, args=(cpeTerm, cpeList, event)).start()
 
-        if not event.wait(timeoutTimer):  # 20 seconds timeout
+        if not event.wait(timeoutTimer):  #timeout
             refineSearchDevices.append(cpeTerm)
             continue
         

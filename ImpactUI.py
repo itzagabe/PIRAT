@@ -11,7 +11,13 @@ medium = "#ffd68b"  # Medium
 high = "#f09d9d"  # High
 
 defaultPolicyRating = 0.2 # change this for default policy rating
-values = [0, 0.1, defaultPolicyRating]
+
+class Values:
+    impact = 0
+    data = 0.1
+    policy = 0.2
+
+values = Values()
 
 def SetTooltips(widget, tooltips):
     for child in widget.findChildren(QWidget):
@@ -99,7 +105,7 @@ def UpdateImpactLayout(returnValue, resultButton):
 
     resultButton.setText(f"Impact Extent: {impactExtent:.2f}")
     resultButton.setStyleSheet(f"background-color: {color}; border-radius: 3px; color: black;")
-    values[0] = round(impactExtent, 2)
+    values.impact = round(impactExtent, 2)
 
 def UpdateDataLayout(returnValue, resultButton):
     severityLabel, severityValue = MapDataCategories(returnValue)
@@ -107,10 +113,10 @@ def UpdateDataLayout(returnValue, resultButton):
     color = colorMap.get(severityLabel, "#FFFFFF")
     resultButton.setText(f"{severityLabel} ({severityValue})")
     resultButton.setStyleSheet(f"background-color: {color}; border-radius: 3px; color: black;")
-    values[1] = severityValue
+    values.data = severityValue
     
 def UpdatePolicyLayout(returnValue, resultButton):
-    values[2] = returnValue[0][3]
+    values.policy = returnValue[0][3]
 
 def ImpactCategories():
     severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high)]
