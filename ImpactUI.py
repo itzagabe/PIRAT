@@ -10,7 +10,8 @@ low = "#90EE90"  # Low
 medium = "#ffd68b"  # Medium
 high = "#f09d9d"  # High
 
-values = [0, 0, 0]
+defaultPolicyRating = 0.2 # change this for default policy rating
+values = [0, 0.1, defaultPolicyRating]
 
 def SetTooltips(widget, tooltips):
     for child in widget.findChildren(QWidget):
@@ -135,7 +136,7 @@ def DataCategories():
     return CreateGenericLayout(severityList, ['Data Rate', 'Publishers'], 1, UpdateDataLayout, "#90EE90", tooltips, True)
 
 def PolicyCategories():
-    severityList = [("None", 0.2, "#bababa"), ("Low", 0.4, low), ("Medium", 0.6, medium), ("High", 0.9, high)] # CHANGED None and High
+    severityList = [("None", defaultPolicyRating, "#bababa"), ("Low", 0.4, low), ("Medium", 0.6, medium), ("High", 0.9, high)] # CHANGED None and High
     tooltips = {"Policy Strength": "How strong are security-related procedural policies and guidelines"}
 
     return CreateGenericLayout(severityList, ['Policy Strength'], 1, UpdatePolicyLayout, "#bababa", tooltips, False)

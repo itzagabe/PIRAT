@@ -16,9 +16,6 @@ def toggle_detailed_search(state):
     detailed_search = bool(state)
     print(state)
 
-def empty_method():
-    pass
-
 def show_error_popup(message):
     msg_box = QMessageBox()
     msg_box.setIcon(QMessageBox.Warning)
@@ -151,8 +148,6 @@ def create_individual_layout():
     return individual_layout
 
 def create_group_layout(container = None):
-    if container is None:
-        container = app
 
     group_layout = QVBoxLayout()
 
@@ -180,6 +175,50 @@ def create_group_layout(container = None):
     group_layout.addWidget(results_list)
 
     return group_layout
+
+def setupImportDevices(container):
+    frame = QFrame(container)
+    frame.setFrameShape(QFrame.Box)
+    frame.setLineWidth(1)
+    
+    main_layout = QVBoxLayout(frame)
+
+    # Top layout with dropdown and help button
+    top_layout = QHBoxLayout()
+
+    # Dropdown for Individual and Group
+    dropdown = QComboBox()
+    dropdown.addItems(["Individual", "Group"])
+    top_layout.addWidget(dropdown)
+
+    # Help button
+    help_button = QPushButton()
+    help_button.setIcon(container.style().standardIcon(QStyle.SP_MessageBoxInformation))
+    help_button.setFixedSize(20, 20)  # Adjust size
+    help_button.clicked.connect(lambda: show_help_window(dropdown.currentText()))
+    top_layout.addWidget(help_button)
+
+    main_layout.addLayout(top_layout)
+
+    # Stacked Layout for Individual and Group views
+    stacked_layout = QStackedLayout()
+
+    individual_widget = QWidget()
+    individual_widget.setLayout(create_individual_layout())
+    stacked_layout.addWidget(individual_widget)
+
+    group_widget = QWidget()
+    group_widget.setLayout(create_group_layout(container))
+    stacked_layout.addWidget(group_widget)
+
+    def switch_view(index):
+        stacked_layout.setCurrentIndex(index)
+
+    dropdown.currentIndexChanged.connect(switch_view)
+    main_layout.addLayout(stacked_layout)
+
+    container.setLayout(QVBoxLayout())
+    container.layout().addWidget(frame)
 
 def show_help_window(selection):
     help_text = {
@@ -244,98 +283,6 @@ def show_help_window(selection):
 
     dialog.exec()
 
-def create_main_container():
-    global app
-    app = QApplication([])
-
-    # Main Window
-    window = QWidget()
-    main_layout = QVBoxLayout()
-
-    # Top layout with dropdown and help button
-    top_layout = QHBoxLayout()
-
-    # Dropdown for Individual and Group
-    dropdown = QComboBox()
-    dropdown.addItems(["Individual", "Group"])
-    top_layout.addWidget(dropdown)
-
-    # Help button
-    help_button = QPushButton()
-    help_button.setIcon(app.style().standardIcon(QStyle.SP_MessageBoxInformation))
-    help_button.setFixedSize(20, 20)  # Adjust size
-    help_button.clicked.connect(lambda: show_help_window(dropdown.currentText()))
-    top_layout.addWidget(help_button)
-
-    main_layout.addLayout(top_layout)
-
-    # Stacked Layout for Individual and Group views
-    stacked_layout = QStackedLayout()
-
-    individual_widget = QWidget()
-    individual_widget.setLayout(create_individual_layout())
-    stacked_layout.addWidget(individual_widget)
-
-    group_widget = QWidget()
-    group_widget.setLayout(create_group_layout())  # Provide the path to the custom icon
-    stacked_layout.addWidget(group_widget)
-
-    def switch_view(index):
-        stacked_layout.setCurrentIndex(index)
-
-    dropdown.currentIndexChanged.connect(switch_view)
-    main_layout.addLayout(stacked_layout)
-
-    # Set main layout to window
-    window.setLayout(main_layout)
-    window.show()
-    app.exec()
-
-
-def setupImportDevices(container):
-    frame = QFrame(container)
-    frame.setFrameShape(QFrame.Box)
-    frame.setLineWidth(1)
-    
-    main_layout = QVBoxLayout(frame)
-
-    # Top layout with dropdown and help button
-    top_layout = QHBoxLayout()
-
-    # Dropdown for Individual and Group
-    dropdown = QComboBox()
-    dropdown.addItems(["Individual", "Group"])
-    top_layout.addWidget(dropdown)
-
-    # Help button
-    help_button = QPushButton()
-    help_button.setIcon(container.style().standardIcon(QStyle.SP_MessageBoxInformation))
-    help_button.setFixedSize(20, 20)  # Adjust size
-    help_button.clicked.connect(lambda: show_help_window(dropdown.currentText()))
-    top_layout.addWidget(help_button)
-
-    main_layout.addLayout(top_layout)
-
-    # Stacked Layout for Individual and Group views
-    stacked_layout = QStackedLayout()
-
-    individual_widget = QWidget()
-    individual_widget.setLayout(create_individual_layout())
-    stacked_layout.addWidget(individual_widget)
-
-    group_widget = QWidget()
-    group_widget.setLayout(create_group_layout(container))
-    stacked_layout.addWidget(group_widget)
-
-    def switch_view(index):
-        stacked_layout.setCurrentIndex(index)
-
-    dropdown.currentIndexChanged.connect(switch_view)
-    main_layout.addLayout(stacked_layout)
-
-    container.setLayout(QVBoxLayout())
-    container.layout().addWidget(frame)
-
 def getValues():
     # Initialize lists for active and inactive CVEs in the desired format
     active_cves_list = []
@@ -390,11 +337,3 @@ def ProbabilityExploitability(cveList):
         probabilities.append((cpe, probability))
 
     return probabilities
-
-        
-
-def main():
-    create_main_container()
-
-if __name__ == "__main__":
-    main()
