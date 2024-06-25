@@ -4,7 +4,7 @@ import sys
 from newUI import setup_ui as SetUpBottom
 from newUI import values as severityValues
 from ImportDevices import setup_ui as SetUpTop
-from ImportDevices import deviceInfoList, getValues
+from ImportDevices import deviceInfoList, getImportValues
 
 class ResultsWindow(QMainWindow):
     def __init__(self, results, parent=None):
@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
 
     def show_results(self):
         results = str(severityValues) + "\n"  # Replace with actual results
-        results += getValues()
+        results += getImportValues()
         self.results_window = ResultsWindow(results)
         self.results_window.show()
 

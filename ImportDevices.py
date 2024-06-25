@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLineEdit, QPushButton,
-    QLabel, QCheckBox, QListWidget, QFileDialog, QStyle, QStackedLayout, QMessageBox, QDialog, QFrame
+    QLabel, QCheckBox, QListWidget, QFileDialog, QStyle, QStackedLayout, QMessageBox, QDialog, QFrame, QListWidgetItem
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor, QIcon
@@ -9,7 +9,8 @@ from nvd import getExploitabilityScoreCVE, getConfidentialityImpactCVE
 
 search_terms = []
 detailed_search = False
-deviceInfoList = [] # format [(cpe name, [(cve, status), (cve, status), etc]), (cpe name, [(cve, status), (cve, status), etc])]
+deviceInfoList = []  # format [(cpe name, [(cve, status), (cve, status), etc]), (cpe name, [(cve, status), (cve, status), etc])]
+results_to_device_map = {}
 
 def toggle_detailed_search(state):
     global detailed_search
@@ -24,7 +25,7 @@ def show_error_popup(message):
     msg_box.exec()
 
 def handle_search(source, results_list, device_name_edit=None):
-    global search_terms, deviceInfoList
+    global search_terms, deviceInfoList, results_to_device_map
     if source == "Individual":
         device_name = device_name_edit.text().strip() if device_name_edit else ""
         if not device_name:
@@ -34,13 +35,24 @@ def handle_search(source, results_list, device_name_edit=None):
         search_terms.append((device_name, 1))
     
     try:
-        deviceInfoList = searchPLCInfoNVD(search_terms, detailed_search)  # Pass the list of search terms with counts
-        deviceInfoList = [(cpe, cves) for cpe, cves in deviceInfoList]
+        # Perform search with the current search terms
+        new_device_info_list = searchPLCInfoNVD(search_terms, detailed_search)  # Pass the list of search terms with counts
+        new_device_info_list = [(cpe, cves) for cpe, cves in new_device_info_list]
 
-        # Populate the results list with CPEs
+        # Append new devices to the existing list after the search
+        start_idx = len(deviceInfoList)
+        deviceInfoList.extend(new_device_info_list)
+
+        # Clear the results list before populating it with past and new devices
         results_list.clear()
-        for cpe, _ in deviceInfoList:
-            results_list.addItem(cpe)
+        results_to_device_map.clear()
+
+        # Populate the results list with both past and new devices
+        for idx in range(len(deviceInfoList)):
+            cpe, _ = deviceInfoList[idx]
+            item = QListWidgetItem(cpe)
+            results_list.addItem(item)
+            results_to_device_map[idx] = item
     except Exception as e:
         show_error_popup(f"An error occurred during search: {e}")
 
@@ -69,14 +81,32 @@ def handle_group_file_load(path_box):
         path_box.setPlaceholderText("File path will be displayed here")
         path_box.setStyleSheet("font-style: italic;")
 
-def showCVEPopup(cpe):
-    global deviceInfoList
-    def toggleCVE(cpe, cve, checked):
-        for device, cves in deviceInfoList:
-            if device == cpe:
-                for i in range(len(cves)):
-                    if cves[i][0] == cve:
-                        cves[i] = (cve, checked)
+def showCVEPopup(item, results_list):
+    global deviceInfoList, results_to_device_map
+    idx = results_list.row(item)
+    cpe, cves = deviceInfoList[idx]
+    
+    def toggleCVE(idx, cve, checked):
+        for i in range(len(deviceInfoList[idx][1])):
+            if deviceInfoList[idx][1][i][0] == cve:
+                deviceInfoList[idx][1][i] = (cve, checked)
+                        
+    def remove_device():
+        reply = QMessageBox.question(
+            None, 'Remove Device',
+            f"Are you sure you want to remove the device {cpe}?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            global deviceInfoList, results_to_device_map
+            del deviceInfoList[idx]
+            results_list.takeItem(idx)
+            results_to_device_map.clear()
+            for i in range(len(deviceInfoList)):
+                results_to_device_map[i] = results_list.item(i)
+            dialog.accept()
+
     app = QApplication.instance() or QApplication([])
 
     dialog = QDialog()
@@ -85,19 +115,25 @@ def showCVEPopup(cpe):
     layout = QVBoxLayout()
     dialog.setLayout(layout)
 
-    for device, cves in deviceInfoList:
-        if device == cpe:
-            for cve, active in cves:
-                checkbox = QCheckBox(cve.id)
-                checkbox.setChecked(active)
-                checkbox.toggled.connect(lambda checked, cve=cve: toggleCVE(cpe, cve, checked))
-                layout.addWidget(checkbox)
+    for cve, active in cves:
+        checkbox = QCheckBox(cve.id)
+        checkbox.setChecked(active)
+        checkbox.toggled.connect(lambda checked, cve=cve: toggleCVE(idx, cve, checked))
+        layout.addWidget(checkbox)
 
+    button_layout = QHBoxLayout()
+    
+    remove_button = QPushButton("Remove")
+    remove_button.setStyleSheet("background-color: #FF6347; border: none; color: white;")
+    remove_button.clicked.connect(remove_device)
+    button_layout.addWidget(remove_button)
+    
     close_button = QPushButton("Close")
     close_button.setStyleSheet("background-color: #ADD8E6; border: none; color: white;")
-    layout.addWidget(close_button)
-
     close_button.clicked.connect(dialog.accept)
+    button_layout.addWidget(close_button)
+    
+    layout.addLayout(button_layout)
 
     dialog.exec()
 
@@ -123,34 +159,25 @@ def create_bottom_layout():
 
 def create_results_list():
     results_list = QListWidget()
-    #results_list.setToolTip("This is the list of imported devices.")
     results_list.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
     results_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-    results_list.itemDoubleClicked.connect(lambda item: showCVEPopup(item.text()))
+    results_list.itemDoubleClicked.connect(lambda item: showCVEPopup(item, results_list))
     return results_list
 
-def create_individual_layout():
+def create_individual_layout(results_list):
     individual_layout = QVBoxLayout()
     device_name_edit = QLineEdit()
     device_name_edit.setPlaceholderText("Enter Device Name")
     device_name_edit.setStyleSheet("font-style: italic;")
     individual_layout.addWidget(device_name_edit)
 
-    results_list = create_results_list()
-
     search_button = QPushButton("Search")
     search_button.clicked.connect(lambda: handle_search("Individual", results_list, device_name_edit))
     individual_layout.addWidget(search_button)
 
-    individual_layout.addLayout(create_bottom_layout())
-    individual_layout.addWidget(results_list)
-
     return individual_layout
 
-def create_group_layout(container = None):
-    if container is None:
-        container = app
-
+def create_group_layout(container, results_list):
     group_layout = QVBoxLayout()
 
     group_file_layout = QHBoxLayout()
@@ -167,16 +194,79 @@ def create_group_layout(container = None):
     group_file_layout.addWidget(group_textbox)
     group_layout.addLayout(group_file_layout)
 
-    results_list = create_results_list()
-
     search_button = QPushButton("Search")
     search_button.clicked.connect(lambda: handle_search("Group", results_list))
     group_layout.addWidget(search_button)
 
-    group_layout.addLayout(create_bottom_layout())
-    group_layout.addWidget(results_list)
-
     return group_layout
+
+def clear_devices(results_list):
+    reply = QMessageBox.question(
+        None, 'Clear All Devices',
+        "Are you sure you want to clear all devices?",
+        QMessageBox.Yes | QMessageBox.No,
+        QMessageBox.No
+    )
+    if reply == QMessageBox.Yes:
+        global deviceInfoList, results_to_device_map
+        deviceInfoList.clear()
+        results_to_device_map.clear()
+        results_list.clear()
+
+def setupImportDevices(container):
+    frame = QFrame(container)
+    frame.setFrameShape(QFrame.Box)
+    frame.setLineWidth(1)
+    
+    main_layout = QVBoxLayout(frame)
+
+    # Top layout with dropdown and help button
+    top_layout = QHBoxLayout()
+
+    # Dropdown for Individual and Group
+    dropdown = QComboBox()
+    dropdown.addItems(["Individual", "Group"])
+    top_layout.addWidget(dropdown)
+
+    # Help button
+    help_button = QPushButton()
+    help_button.setIcon(container.style().standardIcon(QStyle.SP_MessageBoxInformation))
+    help_button.setFixedSize(20, 20)  # Adjust size
+    help_button.clicked.connect(lambda: show_help_window(dropdown.currentText()))
+    top_layout.addWidget(help_button)
+
+    main_layout.addLayout(top_layout)
+
+    # Stacked Layout for Individual and Group views
+    stacked_layout = QStackedLayout()
+
+    results_list = create_results_list()
+
+    individual_widget = QWidget()
+    individual_layout = create_individual_layout(results_list)
+    individual_widget.setLayout(individual_layout)
+    stacked_layout.addWidget(individual_widget)
+
+    group_widget = QWidget()
+    group_layout = create_group_layout(container, results_list)
+    group_widget.setLayout(group_layout)
+    stacked_layout.addWidget(group_widget)
+
+    def switch_view(index):
+        stacked_layout.setCurrentIndex(index)
+
+    dropdown.currentIndexChanged.connect(switch_view)
+    main_layout.addLayout(stacked_layout)
+
+    main_layout.addLayout(create_bottom_layout())
+    main_layout.addWidget(results_list)
+
+    clear_devices_button = QPushButton("Clear Devices")
+    clear_devices_button.clicked.connect(lambda: clear_devices(results_list))
+    main_layout.addWidget(clear_devices_button)
+
+    container.setLayout(QVBoxLayout())
+    container.layout().addWidget(frame)
 
 def show_help_window(selection):
     help_text = {
@@ -241,99 +331,10 @@ def show_help_window(selection):
 
     dialog.exec()
 
-def create_main_container():
-    global app
-    app = QApplication([])
-
-    # Main Window
-    window = QWidget()
-    main_layout = QVBoxLayout()
-
-    # Top layout with dropdown and help button
-    top_layout = QHBoxLayout()
-
-    # Dropdown for Individual and Group
-    dropdown = QComboBox()
-    dropdown.addItems(["Individual", "Group"])
-    top_layout.addWidget(dropdown)
-
-    # Help button
-    help_button = QPushButton()
-    help_button.setIcon(app.style().standardIcon(QStyle.SP_MessageBoxInformation))
-    help_button.setFixedSize(20, 20)  # Adjust size
-    help_button.clicked.connect(lambda: show_help_window(dropdown.currentText()))
-    top_layout.addWidget(help_button)
-
-    main_layout.addLayout(top_layout)
-
-    # Stacked Layout for Individual and Group views
-    stacked_layout = QStackedLayout()
-
-    individual_widget = QWidget()
-    individual_widget.setLayout(create_individual_layout())
-    stacked_layout.addWidget(individual_widget)
-
-    group_widget = QWidget()
-    group_widget.setLayout(create_group_layout())  # Provide the path to the custom icon
-    stacked_layout.addWidget(group_widget)
-
-    def switch_view(index):
-        stacked_layout.setCurrentIndex(index)
-
-    dropdown.currentIndexChanged.connect(switch_view)
-    main_layout.addLayout(stacked_layout)
-
-    # Set main layout to window
-    window.setLayout(main_layout)
-    window.show()
-    app.exec()
-
-
-def setupImportDevices(container):
-    frame = QFrame(container)
-    frame.setFrameShape(QFrame.Box)
-    frame.setLineWidth(1)
-    
-    main_layout = QVBoxLayout(frame)
-
-    # Top layout with dropdown and help button
-    top_layout = QHBoxLayout()
-
-    # Dropdown for Individual and Group
-    dropdown = QComboBox()
-    dropdown.addItems(["Individual", "Group"])
-    top_layout.addWidget(dropdown)
-
-    # Help button
-    help_button = QPushButton()
-    help_button.setIcon(container.style().standardIcon(QStyle.SP_MessageBoxInformation))
-    help_button.setFixedSize(20, 20)  # Adjust size
-    help_button.clicked.connect(lambda: show_help_window(dropdown.currentText()))
-    top_layout.addWidget(help_button)
-
-    main_layout.addLayout(top_layout)
-
-    # Stacked Layout for Individual and Group views
-    stacked_layout = QStackedLayout()
-
-    individual_widget = QWidget()
-    individual_widget.setLayout(create_individual_layout())
-    stacked_layout.addWidget(individual_widget)
-
-    group_widget = QWidget()
-    group_widget.setLayout(create_group_layout(container))
-    stacked_layout.addWidget(group_widget)
-
-    def switch_view(index):
-        stacked_layout.setCurrentIndex(index)
-
-    dropdown.currentIndexChanged.connect(switch_view)
-    main_layout.addLayout(stacked_layout)
-
-    container.setLayout(QVBoxLayout())
-    container.layout().addWidget(frame)
-
-def getValues():
+def getImportValues():
+    if not deviceInfoList:
+        print('empty')
+        return 0, False
     # Initialize lists for active and inactive CVEs in the desired format
     active_cves_list = []
     inactive_cves_list = []
@@ -358,9 +359,20 @@ def getValues():
     num_active_cves = len(active_cves_list)
     num_inactive_cves = len(inactive_cves_list)
 
+
     #Confidentiality(active_cves_list)
-    print(f'Probability of Exploitability: {ProbabilityExploitability(active_cves_list)}')
-    return f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}"
+    #print(f'Probability of Exploitability:')
+    averageProbability = 0
+    for cpe, probability in ProbabilityExploitability(active_cves_list):
+    #for cpe in ProbabilityExploitability(tempCVELIST):
+        averageProbability += probability
+        #print(probability)
+    averageProbability = averageProbability / num_cpes
+    k = 5
+    overallProbability = (averageProbability - (num_cpes - 1) / (k - 1)) + (num_cpes - 1) / (k - 1)
+    print(f'Overall Probability = {averageProbability}\n')
+    return overallProbability, True
+    #return f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}", deviceInfoList
 
 def Confidentiality(cveList):
     for cpe, cves in cveList:
@@ -387,11 +399,3 @@ def ProbabilityExploitability(cveList):
         probabilities.append((cpe, probability))
 
     return probabilities
-
-        
-
-def main():
-    create_main_container()
-
-if __name__ == "__main__":
-    main()

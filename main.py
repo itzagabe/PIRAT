@@ -1,30 +1,32 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QPushButton, QLabel, QSizePolicy, QSlider, QLineEdit
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QPushButton, QLabel, QSizePolicy, QSlider, QLineEdit, QMessageBox
 from PySide6.QtCore import Qt
 import sys
 from ImpactUI import setupTopRight, setupImpact, updateTimeDifference
 from ImpactUI import values as IE_TI_ProSucc
 from ImpactUI import timeDifference
-from ImportDevices import setupImportDevices
+from ImportDevices import setupImportDevices, getImportValues
 
 results_window = None
 results_text_box = None
 
-def create_results_window(results):
-    window = QMainWindow()
-    window.setWindowTitle("Results")
-    window.setGeometry(100, 100, 400, 300)
-    
-    container = QWidget()
-    layout = QVBoxLayout(container)
+def EmptyImport(variable):
+    if not variable:
+        reply = QMessageBox.question(
+            None, 
+            'No Imported Devices',
+            f"Without any imported devices, the calculation will assume the worst case scenario in which the probability of an exploit is guaranteed. Do you want to continue?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        return reply == QMessageBox.Yes
+    return True
 
-    label = QLabel(results)
-    layout.addWidget(label)
-    
-    container.setLayout(layout)
-    window.setCentralWidget(container)
-    return window
 
 def show_results():
+    deviceProbability, isNotEmpty = getImportValues()
+    if not EmptyImport(isNotEmpty):
+      return
+        
     def displayTimeDifference(hours):
         months = hours // (30 * 24)
         hours %= (30 * 24)
@@ -45,6 +47,8 @@ def show_results():
 
         return ", ".join(result)
 
+    if isNotEmpty:
+        print('not empty')
     probability = IE_TI_ProSucc[2]
     impact = (1 - IE_TI_ProSucc[0] * IE_TI_ProSucc[1])
     finalRisk = probability * impact
@@ -53,6 +57,7 @@ def show_results():
     cryptoperiod = timeRange1 + (finalRisk * (timeRange2 - timeRange1))
     cryptoperiod_display = displayTimeDifference(cryptoperiod)
 
+    #getValues()
     print(f'Probability of risk: {round(probability, 2)}')
     print(f'Impact: {round(impact, 2)}')
     print(f'Final Risk: {round(finalRisk, 2)}')
