@@ -1,19 +1,20 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QPushButton, QLabel, QSizePolicy, QSlider, QLineEdit, QMessageBox, QCheckBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QFrame, QPushButton, QLabel, QSizePolicy, QSlider, QLineEdit, QMessageBox, QCheckBox, QMenuBar, QMenu
+from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
 import sys
 from ImpactUI import setupTopRight, setupImpact, updateTimeDifference
 from ImpactUI import values
-from ImpactUI import timeDifference
 from ImportDevices import setupImportDevices, getImportValues
 
-results_window = None
+#results_window = None
 results_text_box = None
-show_message_box = True #do not show again
+show_message_box = True  # do not show again
 
 def EmptyImport(variable):
     global show_message_box
+
     if not variable and show_message_box:
-        # Create the message box
+
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Warning)
         msg_box.setText("Without any imported devices, the calculation will assume the worst case scenario in which the probability of an exploit is guaranteed. Do you want to continue?")
@@ -21,31 +22,25 @@ def EmptyImport(variable):
         msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         msg_box.setDefaultButton(QMessageBox.No)
         
-        # Create a widget to hold the text and the checkbox
         main_widget = QWidget()
         main_layout = QVBoxLayout(main_widget)
-        
-        # Create and add the checkbox to the main layout
         checkbox = QCheckBox("Do not show again")
         main_layout.addWidget(checkbox)
-        
-        # Set the custom widget as the main content of the message box
         msg_box.layout().addWidget(main_widget, 1, 0, 1, msg_box.layout().columnCount())
 
-        # Execute the message box
         reply = msg_box.exec()
         
-        # Check if the "Do not show again" checkbox is checked
+        # do not show checkbox
         if checkbox.isChecked():
             show_message_box = False
 
         return reply == QMessageBox.Yes
     return True
 
-def show_results():
+def ShowResults():
     deviceProbability, isNotEmpty = getImportValues()
     if not EmptyImport(isNotEmpty):
-      return
+        return
         
     def displayTimeDifference(hours):
         months = hours // (30 * 24)
@@ -62,7 +57,7 @@ def show_results():
 
         result = []
         if months > 0:
-          result.append(f"{months} month{'s' if months != 1 else ''}")
+            result.append(f"{months} month{'s' if months != 1 else ''}")
         if days > 0 or (months > 0 and (hours > 0 or minutes > 0)):
             result.append(f"{days} day{'s' if days != 1 else ''}")
         if hours > 0 or (days > 0 or months > 0) and minutes > 0:
@@ -70,31 +65,72 @@ def show_results():
         if minutes > 0 or hours > 0 or days > 0 or months > 0:
             result.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
 
-
         return ", ".join(result)
 
+    print(f'Probability software: {deviceProbability}\nProcedure Probability: {values.policy}\nTransmission Impact: {values.data}\nImportance Impact: {values.impact}')
+    
     if isNotEmpty:
         probability = deviceProbability * values.policy
-    probability = values.policy
+    else:
+        probability = values.policy
+  
     impact = (1 - values.impact * values.data)
+
+    print(f'Total Probability: {probability}')
+    print(f'Total Impact: {impact}')
+
     finalRisk = probability * impact
     timeRange1, timeRange2 = updateTimeDifference()
 
     cryptoperiod = timeRange1 + (finalRisk * (timeRange2 - timeRange1))
     cryptoperiod_display = displayTimeDifference(cryptoperiod)
 
-    #getValues()
-    print(f'Probability of risk: {round(probability, 2)}')
-    print(f'Impact: {round(1 - impact, 2)}')
-    print(f'Final Risk: {round(finalRisk, 2)}')
-    print(f'Recommended cryptoperiod: {cryptoperiod_display}\n')
-
     if results_text_box:
         results_text_box.setText(f"Recommended cryptoperiod: {cryptoperiod_display}")
+        print(f"Recommended cryptoperiod: {cryptoperiod_display}\n")
 
 def create_main_window():
+    def set_dark_mode():
+        app.setStyleSheet("""
+            QMainWindow { background-color: #2E2E2E; color: white; }
+            QWidget { background-color: #2E2E2E; color: white; }
+            QPushButton { background-color: #1E90FF; color: white; border-radius: 3px; }
+            QLineEdit { background-color: #3E3E3E; color: white; }
+            QCheckBox { background-color: #2E2E2E; color: white; }
+        """)
+
+    def set_light_mode():
+        app.setStyleSheet("""
+            QMainWindow { background-color: white; color: black; }
+            QWidget { background-color: white; color: black; }
+            QPushButton { background-color: #1E90FF; color: white; border-radius: 3px; }
+            QLineEdit { background-color: #F0F0F0; color: black; }
+            QCheckBox { background-color: white; color: black; }
+        """)
+
+    def set_normal_mode():
+        app.setStyleSheet("")
+
     window = QMainWindow()
-    window.setWindowTitle("Main UI")
+    window.setWindowTitle("ARC-C Cryptoperiod Calculator")
+
+    menu_bar = QMenuBar()
+    #window.setMenuBar(menu_bar)
+
+    appearance_menu = QMenu("Appearance", window)
+    #menu_bar.addMenu(appearance_menu)
+
+    dark_mode_action = QAction("Dark Mode", window)
+    dark_mode_action.triggered.connect(set_dark_mode)
+    appearance_menu.addAction(dark_mode_action)
+
+    light_mode_action = QAction("Light Mode", window)
+    light_mode_action.triggered.connect(set_light_mode)
+    appearance_menu.addAction(light_mode_action)
+
+    normal_mode_action = QAction("Normal Mode", window)
+    normal_mode_action.triggered.connect(set_normal_mode)
+    appearance_menu.addAction(normal_mode_action)
 
     container = QWidget()
     main_layout = QVBoxLayout(container)
@@ -109,8 +145,6 @@ def create_main_window():
     top_layout.addWidget(left_container)
 
     right_container = QFrame()
-    slider1 = QSlider(Qt.Horizontal)
-
     setupTopRight(right_container)
     top_layout.addWidget(right_container)
 
@@ -127,11 +161,12 @@ def create_main_window():
     button_text_layout = QHBoxLayout()
 
     # Create the print button
-    print_button = QPushButton("Print Results")
+    print_button = QPushButton("Calculate Cryptoperiod")
     print_button.setFixedHeight(30)
     print_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     print_button.setToolTip("This button prints the results.")
-    print_button.clicked.connect(show_results)
+    print_button.clicked.connect(ShowResults)
+    print_button.setStyleSheet("background-color: #1E90FF; color: white; border-radius: 3px;")
     button_text_layout.addWidget(print_button, 1)
 
     # Create the uneditable text box
@@ -140,16 +175,18 @@ def create_main_window():
     results_text_box.setReadOnly(True)
     results_text_box.setFixedHeight(30)
     results_text_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    button_text_layout.addWidget(results_text_box, 5)
+    button_text_layout.addWidget(results_text_box, 4)
 
     # Add the horizontal layout to the main layout
     main_layout.addLayout(button_text_layout)
 
     container.setLayout(main_layout)
     window.setCentralWidget(container)
+    #window.setGeometry(100, 50, 800, 600)  # Set the window position higher
     return window
 
 def main():
+    global app
     app = QApplication(sys.argv)
     window = create_main_window()
     window.show()

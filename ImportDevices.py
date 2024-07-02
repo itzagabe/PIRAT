@@ -124,12 +124,12 @@ def showCVEPopup(item, results_list):
     button_layout = QHBoxLayout()
     
     remove_button = QPushButton("Remove")
-    remove_button.setStyleSheet("background-color: #FF6347; border: none; color: white;")
+    #remove_button.setStyleSheet("background-color: #FF6347; border: none; color: white;")
     remove_button.clicked.connect(remove_device)
     button_layout.addWidget(remove_button)
     
     close_button = QPushButton("Close")
-    close_button.setStyleSheet("background-color: #ADD8E6; border: none; color: white;")
+    #close_button.setStyleSheet("background-color: #ADD8E6; border: none; color: white;")
     close_button.clicked.connect(dialog.accept)
     button_layout.addWidget(close_button)
     
@@ -384,6 +384,7 @@ def ProbabilityExploitability(cveList):
     probabilities = []
 
     for cpe, cves in cveList:
+        print(cpe, cve)
         overallScore = 0
         maxScore = 0
         for cve in cves:

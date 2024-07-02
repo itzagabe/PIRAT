@@ -7,7 +7,7 @@ import datetime
 officialCPE = []
 notFoundDevices = []
 refineSearchDevices = []
-timeoutTimer = 10
+timeoutTimer = 3
 
 def searchPLCInfoNVD(searchTermList, refinedSearch = True):
     global officialCPE, notFoundDevices, refineSearchDevices, timeoutTimer
@@ -81,7 +81,7 @@ def chooseWhichCPE(cpeList, cpeTerm, idx, listLength, count):
     layout.addWidget(list_widget)
 
     confirm_button = QPushButton("Select")
-    confirm_button.setStyleSheet("background-color: blue; border-radius: 3px; color: white;")
+    #confirm_button.setStyleSheet("background-color: blue; border-radius: 3px; color: white;")
     layout.addWidget(confirm_button)
 
     def on_confirm():
@@ -119,7 +119,7 @@ def showNotFoundDevicesPopup(notFoundDevices, refineSearchDevices):
         layout.addWidget(list_widget_refine_search)
 
     close_button = QPushButton("Close")
-    close_button.setStyleSheet("background-color: blue; border-radius: 3px; color: white;")
+    #close_button.setStyleSheet("background-color: blue; border-radius: 3px; color: white;")
     layout.addWidget(close_button)
 
     close_button.clicked.connect(dialog.accept)

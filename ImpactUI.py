@@ -9,6 +9,7 @@ from ImpactLogic import *
 low = "#90EE90"  # Low
 medium = "#ffd68b"  # Medium
 high = "#f09d9d"  # High
+critical = "#e47676"  # High
 
 defaultPolicyRating = 0.2 # change this for default policy rating
 
@@ -103,8 +104,12 @@ def UpdateImpactLayout(returnValue, resultButton):
     else:
         color = colors[-1][1]
 
+    impactExtent = min(impactExtent, 1)
+
     resultButton.setText(f"Impact Extent: {impactExtent:.2f}")
     resultButton.setStyleSheet(f"background-color: {color}; border-radius: 3px; color: black;")
+    if impactExtent > 1:
+        impactExtent = 1
     values.impact = round(impactExtent, 2)
 
 def UpdateDataLayout(returnValue, resultButton):
@@ -119,7 +124,7 @@ def UpdatePolicyLayout(returnValue, resultButton):
     values.policy = returnValue[0][3]
 
 def ImpactCategories():
-    severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high)]
+    severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high), ("Critical", 2, critical)]
     categoryList = [
         ("Operational", ["Proprietary", "System"]), ("Safety", []), ("Financial", []),
         ("Privacy and Legislative", ["Societal Loss", "Regulatory Loss", "Environmental Loss"])
@@ -343,7 +348,7 @@ def setupImpact(container):
     rightLayout.setSpacing(10)
     rightLayout.setAlignment(Qt.AlignTop)
 
-    impactText = "Choose the impact of the group data in the event of a compromise. Importance measures how critical a function is to your \norganization's success. Extent measures the actual consequences to a function in the event of an incident.\n"
+    impactText = "Choose the impact of the group data in the event of a compromise. Importance measures how critical a function is to your organization's success. \nExtent measures the actual consequences to a function in the event of an incident.\n"
     impactLabel = QLabel(impactText)
     impactLabel.setAlignment(Qt.AlignLeft)
     rightLayout.addWidget(impactLabel)
@@ -352,7 +357,7 @@ def setupImpact(container):
     labelLayout = QHBoxLayout()
 
     # Spacer item to the left of Importance label with a fixed width
-    spacer_before_importance = QSpacerItem(261, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
+    spacer_before_importance = QSpacerItem(290, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
     labelLayout.addItem(spacer_before_importance)
 
     # Importance label
@@ -361,7 +366,7 @@ def setupImpact(container):
     labelLayout.addWidget(importanceLabel)
 
     # Spacer item to the left of Extent label with a fixed width
-    spacer_before_extent = QSpacerItem(73, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
+    spacer_before_extent = QSpacerItem(135, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
     labelLayout.addItem(spacer_before_extent)
 
     # Extent label

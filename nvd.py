@@ -21,7 +21,7 @@ from nvdapikey import key
 
 # Find a way to pretty print this data
 # Find a way to efficiently search for.
-delay = 10
+delay = 2
 
 def searchNVDCPE(model):
     print(f"searching {model}")
