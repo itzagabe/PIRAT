@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor, QIcon
 from NewLogicGroup import searchPLCInfoNVD
 from nvd import getExploitabilityScoreCVE, getConfidentialityImpactCVE
+import math
 
 search_terms = []
 detailed_search = False
@@ -331,7 +332,7 @@ def show_help_window(selection):
 
     dialog.exec()
 
-def getImportValues():
+def getImportValues2():
     if not deviceInfoList:
         return 0, False
     # Initialize lists for active and inactive CVEs in the desired format
@@ -355,12 +356,7 @@ def getImportValues():
 
     # Calculate the number of CPEs, active CVEs, and inactive CVEs
     num_cpes = len(deviceInfoList)
-    num_active_cves = len(active_cves_list)
-    num_inactive_cves = len(inactive_cves_list)
 
-
-    #Confidentiality(active_cves_list)
-    #print(f'Probability of Exploitability:')
     averageProbability = 0
     for cpe, probability in ProbabilityExploitability(active_cves_list):
     #for cpe in ProbabilityExploitability(tempCVELIST):
@@ -373,6 +369,87 @@ def getImportValues():
     return overallProbability, True
     #return f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}", deviceInfoList
 
+def getImportValues():
+    
+
+    #UNCOMMENT#############################################################################################
+    # if not deviceInfoList:
+    #     return 0, False
+    #############################################################################################TEMP
+
+    # Initialize lists for active and inactive CVEs in the desired format
+    active_cves_list = []
+    inactive_cves_list = []
+
+    # Iterate through the deviceInfoList
+    for cpe, cves in deviceInfoList:
+        active_cves = []
+        inactive_cves = []
+        for cve, active in cves:
+            if active:
+                active_cves.append(cve)
+            else:
+                inactive_cves.append(cve)
+        
+        if active_cves:
+            active_cves_list.append((cpe, active_cves))
+        if inactive_cves:
+            inactive_cves_list.append((cpe, inactive_cves))
+
+    baseline_severity = 0.1
+    baseline_device = 0.05
+    
+    vulnerability = []
+    
+    for device in tempDeviceList: ## CHANGE TO active_cves_list #############################################################################################
+        cpe, cves = device
+        
+        # Step 1: Normalize CVE Severities
+        severity_ij = [min(1,(getExploitabilityScoreCVETEST(cve) + baseline_severity) / 3.89) for cve in cves]
+        
+        # Step 2: Calculate Adjusted Severity Sum with Diminishing Returns
+        severity_i = math.sqrt(sum(severity_ij))
+        
+        # Step 3: Apply Logistic Function to Device Vulnerability Score
+        vulnerability_i = severity_i / (1 + severity_i)
+        vulnerability.append(vulnerability_i)
+    
+    # Step 4: Calculate Device Contribution
+    compromise_i = [min(1, v + baseline_device) for v in vulnerability]
+    
+    # Step 5: Calculate Overall Group Compromise Probability
+    overallProbability = 1 - math.prod(1 - c for c in compromise_i)
+    print(f'Probability: {overallProbability}')
+
+    return overallProbability, True
+    #return f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}", deviceInfoList
+
+###########################################################################################
+## TEST ###################################################################################
+###########################################################################################
+cve_scores = {
+    "cve1": 3.89,
+    "cve2": 1.0,
+    "cve3": 1.0,
+}
+
+def getExploitabilityScoreCVETEST(cve):
+    return cve_scores.get(cve, 0)
+
+def updateCveScores(new_scores):
+    global cve_scores
+    cve_scores = new_scores
+
+tempDeviceList = [
+    ("cpe1", ["cve1", "cve2"]),
+    ("cpe2", ["cve3"])
+]
+
+###########################################################################################
+## TEST ###################################################################################
+###########################################################################################
+
+
 def Confidentiality(cveList):
     for cpe, cves in cveList:
         print(cpe)
@@ -384,7 +461,7 @@ def ProbabilityExploitability(cveList):
     probabilities = []
 
     for cpe, cves in cveList:
-        print(cpe, cve)
+        #print(cpe, cve)
         overallScore = 0
         maxScore = 0
         for cve in cves:

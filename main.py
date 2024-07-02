@@ -70,7 +70,7 @@ def ShowResults():
     print(f'Probability software: {deviceProbability}\nProcedure Probability: {values.policy}\nTransmission Impact: {values.data}\nImportance Impact: {values.impact}')
     
     if isNotEmpty:
-        probability = deviceProbability * values.policy
+        probability = (1 - deviceProbability) * values.policy
     else:
         probability = values.policy
   
@@ -180,6 +180,19 @@ def create_main_window():
     # Add the horizontal layout to the main layout
     main_layout.addLayout(button_text_layout)
 
+    ################################################################################################################################
+    ###TEMP
+    from CPEEditor import CPEEditor
+    from ImportDevices import tempDeviceList
+    edit_cpe_button = QPushButton(" CPE Edit ")
+    edit_cpe_button.setFixedHeight(30)
+    edit_cpe_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    edit_cpe_button.setToolTip("This button opens the CPE editor.")
+    edit_cpe_button.clicked.connect(lambda: CPEEditor(tempDeviceList).exec())
+    edit_cpe_button.setStyleSheet("background-color: #C0C0C0; color: white; border-radius: 3px;")
+    button_text_layout.addWidget(edit_cpe_button, 0.5)
+    ###TEMP
+    ################################################################################################################################
     container.setLayout(main_layout)
     window.setCentralWidget(container)
     #window.setGeometry(100, 50, 800, 600)  # Set the window position higher
