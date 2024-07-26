@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 import sys
 from ImpactUI import setupTopRight, setupImpact, updateTimeDifference
 from ImpactUI import values
-from ImportDevices import setupImportDevices, getImportValues
+from ImportDevicesUI import setupImportDevices, getImportValues
 
 #results_window = None
 results_text_box = None
@@ -183,7 +183,7 @@ def create_main_window():
     ################################################################################################################################
     ###TEMP
     from CPEEditor import CPEEditor
-    from ImportDevices import tempDeviceList
+    from ImportDevicesUI import tempDeviceList
     edit_cpe_button = QPushButton(" CPE Edit ")
     edit_cpe_button.setFixedHeight(30)
     edit_cpe_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)

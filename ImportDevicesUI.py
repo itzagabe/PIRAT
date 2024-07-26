@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLineEdit, QPushButton,
-    QLabel, QCheckBox, QListWidget, QFileDialog, QStyle, QStackedLayout, QMessageBox, QDialog, QFrame, QListWidgetItem
+    QLabel, QCheckBox, QListWidget, QFileDialog, QStyle, QStackedLayout, QMessageBox, QDialog, QFrame, QListWidgetItem, QFormLayout, QSpinBox, QToolButton
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor, QIcon
@@ -201,6 +201,131 @@ def create_group_layout(container, results_list):
 
     return group_layout
 
+def create_manual_layout():
+    manual_layout = QVBoxLayout()
+
+    add_device_button = QPushButton("Add Device")
+    add_device_button.clicked.connect(handle_add_device)
+    manual_layout.addWidget(add_device_button)
+    search_button = QPushButton("Search")
+    search_button.setEnabled(False)
+    manual_layout.addWidget(search_button)
+
+
+    return manual_layout
+
+def handle_add_device(results_list):
+    app = QApplication.instance() or QApplication([])
+
+    dialog = QDialog()
+    dialog.setWindowTitle("Add Device")
+
+    layout = QVBoxLayout()
+    dialog.setLayout(layout)
+
+    cpe_label = QLabel("Enter CPE Name:")
+    cpe_name_edit = QLineEdit()
+    cpe_name_edit.setPlaceholderText("Enter CPE Name")
+    layout.addWidget(cpe_label)
+    layout.addWidget(cpe_name_edit)
+
+    cve_list_layout = QVBoxLayout()
+    add_cve_button = QPushButton("Add CVE")
+    cve_list_layout.addWidget(add_cve_button)
+
+    cve_entries = []
+
+    def add_cve_entry():
+        form_layout = QHBoxLayout()
+        cve_id_edit = QLineEdit()
+        cve_id_edit.setPlaceholderText("Enter CVE ID")
+        severity_spinbox = QSpinBox()
+        severity_spinbox.setRange(0, 10)
+        severity_spinbox.setSingleStep(1)
+        remove_button = QToolButton()
+        remove_button.setText("Remove")
+        form_layout.addWidget(QLabel("CVE ID:"))
+        form_layout.addWidget(cve_id_edit)
+        form_layout.addWidget(QLabel("Severity Score:"))
+        form_layout.addWidget(severity_spinbox)
+        form_layout.addWidget(remove_button)
+        
+        cve_list_layout.addLayout(form_layout)
+        cve_entries.append((form_layout, cve_id_edit, severity_spinbox, remove_button))
+
+        def remove_cve_entry():
+            cve_entries.remove((form_layout, cve_id_edit, severity_spinbox, remove_button))
+            form_layout.deleteLater()
+
+        remove_button.clicked.connect(remove_cve_entry)
+
+    add_cve_button.clicked.connect(add_cve_entry)
+    layout.addLayout(cve_list_layout)
+
+    button_layout = QHBoxLayout()
+    save_button = QPushButton("Save")
+    cancel_button = QPushButton("Cancel")
+    button_layout.addWidget(save_button)
+    button_layout.addWidget(cancel_button)
+
+    layout.addLayout(button_layout)
+
+    def save_device():
+        cpe_name = cpe_name_edit.text().strip()
+        if not cpe_name:
+            show_error_popup("Please enter a CPE name.")
+            return
+
+        cve_list = []
+        for _, cve_id_edit, severity_spinbox, _ in cve_entries:
+            cve_id = cve_id_edit.text().strip()
+            severity = severity_spinbox.value()
+            if cve_id or severity != 0:
+                cve_list.append(CVE(cve_id, severity))
+
+        deviceInfoList.append((cpe_name, [(cve, cve.metrics["cvssMetricV31"][0]["exploitabilityScore"]) for cve in cve_list]))
+        
+        item = QListWidgetItem(cpe_name)
+        results_list.addItem(item)
+        results_to_device_map[len(deviceInfoList) - 1] = item
+        
+        dialog.accept()
+
+    save_button.clicked.connect(save_device)
+    cancel_button.clicked.connect(dialog.reject)
+
+    dialog.exec()
+
+class CVE:
+    def __init__(self, cve_id, exploitability_score):
+        self.id = cve_id
+        self.metrics = {
+            "cvssMetricV31": [
+                {"exploitabilityScore": exploitability_score}
+            ]
+        }
+
+def create_manual_layout(results_list):
+    manual_layout = QVBoxLayout()
+
+    add_device_button = QPushButton("Add Device")
+    add_device_button.clicked.connect(lambda: handle_add_device(results_list))
+    manual_layout.addWidget(add_device_button)
+
+    search_button = QPushButton("Search")
+    search_button.setEnabled(False)
+    manual_layout.addWidget(search_button)
+
+    return manual_layout
+
+
+def setupImportDevices(container):
+    frame = QFrame(container)
+    frame.setFrameShape(QFrame.Box)
+    frame.setLineWidth(1)
+    
+    main_layout = QVBoxLayout(frame)
+
 def clear_devices(results_list):
     reply = QMessageBox.question(
         None, 'Clear All Devices',
@@ -224,9 +349,9 @@ def setupImportDevices(container):
     # Top layout with dropdown and help button
     top_layout = QHBoxLayout()
 
-    # Dropdown for Individual and Group
+    # Dropdown for Individual, Group, and Manual
     dropdown = QComboBox()
-    dropdown.addItems(["Individual", "Group"])
+    dropdown.addItems(["Individual", "Group", "Manual"])  # Added "Manual"
     top_layout.addWidget(dropdown)
 
     # Help button
@@ -238,7 +363,7 @@ def setupImportDevices(container):
 
     main_layout.addLayout(top_layout)
 
-    # Stacked Layout for Individual and Group views
+    # Stacked Layout for Individual, Group, and Manual views
     stacked_layout = QStackedLayout()
 
     results_list = create_results_list()
@@ -252,9 +377,15 @@ def setupImportDevices(container):
     group_layout = create_group_layout(container, results_list)
     group_widget.setLayout(group_layout)
     stacked_layout.addWidget(group_widget)
+    
+    manual_widget = QWidget()
+    manual_layout = create_manual_layout(results_list)
+    manual_widget.setLayout(manual_layout)
+    stacked_layout.addWidget(manual_widget)
 
     def switch_view(index):
         stacked_layout.setCurrentIndex(index)
+        #search_button.setEnabled(dropdown.currentText() != "Manual")
 
     dropdown.currentIndexChanged.connect(switch_view)
     main_layout.addLayout(stacked_layout)
@@ -373,8 +504,8 @@ def getImportValues():
     
 
     #UNCOMMENT#############################################################################################
-    # if not deviceInfoList:
-    #     return 0, False
+    if not deviceInfoList:
+        return 0, False
     #############################################################################################TEMP
 
     # Initialize lists for active and inactive CVEs in the desired format
@@ -401,11 +532,13 @@ def getImportValues():
     
     vulnerability = []
     
-    for device in tempDeviceList: ## CHANGE TO active_cves_list #############################################################################################
+    for device in active_cves_list: ## CHANGE TO active_cves_list/tempDeviceList #############################################################################################
+        #print(f'ADFESF CPE {cpe}, CVE {cve}, EXPLOIT: {getExploitabilityScoreCVETEST(cve)}')
         cpe, cves = device
-        
+        #print(cve.metrics['cvssMetricV31'][0]['exploitabilityScore'])
         # Step 1: Normalize CVE Severities
-        severity_ij = [min(1,(getExploitabilityScoreCVETEST(cve) + baseline_severity) / 3.89) for cve in cves]
+        severity_ij = [min(1,(cve.metrics['cvssMetricV31'][0]['exploitabilityScore'] + baseline_severity) / 3.89) for cve in cves]
+        #severity_ij = [min(1,(getExploitabilityScoreCVETEST(cve) + baseline_severity) / 3.89) for cve in cves]
         
         # Step 2: Calculate Adjusted Severity Sum with Diminishing Returns
         severity_i = math.sqrt(sum(severity_ij))

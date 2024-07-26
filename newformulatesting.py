@@ -1,71 +1,71 @@
 import sys
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QMessageBox, QCheckBox
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QMessageBox, QCheckBox, QFileDialog, QSizePolicy, QScrollArea
 import math
 
-k = 15 ### CHANGE THIS IF NEEDED
+savedResults = []
+showClearConfirm = True
+showRemoveConfirm = True
 
-saved_results = []
-show_clear_confirm = True
-show_remove_confirm = True
+def Formula3(parsedDevices):
+    b_c = 0.0001
+    b_d = 0.005
+    c_w = 5
+    
+    v3 = []
+    for device in parsedDevices:
+        susceptability_ij = [(exploit / 3.89) ** c_w + b_c for exploit in device]
+        compromise_ij = [math.sqrt(sus / (1 + sus)) for sus in susceptability_ij]
+        compromisei = b_d + (1 - b_d) * (1 - math.prod(1 - comp for comp in compromise_ij))
+        v3.append(compromisei)
+    pVe = 1 - math.prod(1 - v for v in v3)
+    return pVe, pVe * 100
 
-def calculate():
-    input_text = inputTextBox.text()
+def Calculate():
+    inputText = inputTextBox.text()
     
     try:
-        # Parse the input to extract CVE scores for each device
-        devices = input_text.split('), (')
+        devices = inputText.split('), (')
         devices = [device.replace('(', '').replace(')', '') for device in devices]
-        devices = [list(map(float, device.split(','))) for device in devices]
         
-        baseline_severity = 0.1
-        baseline_device = 0.01
-        
-        V = []
+        parsedDevices = []
         for device in devices:
-            # Step 1: Normalize CVE Severities
-            severity_weights = [(cve + baseline_severity) / 3.89 for cve in device]
-            
-            # Step 2: Calculate Adjusted Severity Sum with Diminishing Returns
-            adjusted_severity_sum = math.sqrt(sum(severity_weights))
-            
-            # Step 3: Apply Logistic Function to Device Vulnerability Score
-            V_i = adjusted_severity_sum / (1 + adjusted_severity_sum)
-            V.append(V_i)
+            parsedDevice = []
+            for value in device.split(','):
+                try:
+                    num = float(value.strip())
+                    if num > 3.89:
+                        raise ValueError("All CVE scores must be less than or equal to 3.89.")
+                    parsedDevice.append(num)
+                except ValueError:
+                    if value.strip():
+                        raise ValueError("Invalid input")
+            parsedDevices.append(parsedDevice)
         
-        # Step 4: Calculate Device Contribution
-        C = [v + baseline_device for v in V]
+        result3, result3Percentage = Formula3(parsedDevices)
+
+        resultLabel.setText(f"Formula 3: {result3:.3f} / {result3Percentage:.2f}%")
+
+    except ValueError as e:
+        resultLabel.setText(f"Error: {str(e)}")
+
+def SaveResult():
+    inputText = inputTextBox.text()
+    if inputText:
+        resultLines = resultLabel.text().split('\n')
+        resultText = f"{resultLines[0].split(': ')[1]}"
+        savedResults.append(f"Input: {inputText}\nOutput: {resultText}\n")
         
-        # Step 5: Calculate Overall Group Compromise Probability
-        result5 = 1 - math.prod(1 - c for c in C)
-        resultLabel5.setText(f"Equation 5: {result5:.2f}")
-
-    except ValueError:
-        pass
-
-
-def save_result():
-    input_text = inputTextBox.text()
-    if input_text:
-        # result1 = resultLabel1.text().split(': ')[1]
-        # result2 = resultLabel2.text().split(': ')[1]
-        # result3 = resultLabel3.text().split(': ')[1]
-        # result4 = resultLabel4.text().split(': ')[1]
-        result5 = resultLabel5.text().split(': ')[1]
-        result_text = f"Input: {input_text}\nOutput: {result5}\n"
-        saved_results.append(result_text)
-        
-        item = QListWidgetItem(result_text)
+        item = QListWidgetItem(f"Input: {inputText}\nOutput: {resultText}\n")
         savedListWidget.addItem(item)
 
-def remove_result():
-    global show_remove_confirm
-
-    selected_items = savedListWidget.selectedItems()
+def RemoveResult():
+    global showRemoveConfirm
+    selectedItems = savedListWidget.selectedItems()
     
-    if not selected_items:
+    if not selectedItems:
         return
 
-    if show_remove_confirm:
+    if showRemoveConfirm:
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Warning)
         msgBox.setText("Are you sure you want to remove the selected item(s)?")
@@ -76,39 +76,53 @@ def remove_result():
         msgBox.setCheckBox(checkBox)
 
         returnValue = msgBox.exec()
+        
         if returnValue == QMessageBox.No:
             return
+        
         if checkBox.isChecked():
-            show_remove_confirm = False
+            showRemoveConfirm = False
 
-    for item in selected_items:
-        saved_results.remove(item.text())
+    for item in selectedItems:
+        savedResults.remove(item.text())
         savedListWidget.takeItem(savedListWidget.row(item))
 
-def clear_results():
-    global show_clear_confirm
+def ClearResults():
+    global showClearConfirm
 
     if savedListWidget.count() == 0:
         return
     
-    if show_clear_confirm:
+    if showClearConfirm:
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Warning)
         msgBox.setText("Are you sure you want to clear the entire list?")
         msgBox.setWindowTitle("Confirm Clear")
         msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        
         checkBox = QCheckBox("Do not ask me again")
         msgBox.setCheckBox(checkBox)
 
         returnValue = msgBox.exec()
+
         if returnValue == QMessageBox.No:
             return
+        
         if checkBox.isChecked():
-            show_clear_confirm = False
+            showClearConfirm = False
 
-    saved_results.clear()
+    savedResults.clear()
     savedListWidget.clear()
+
+def ImportFromFile():
+    fileDialog = QFileDialog()
+    filePath, _ = fileDialog.getOpenFileName(window, "Open Input File", "", "Text Files (*.txt);;All Files (*)")
+    
+    if filePath:
+        with open(filePath, 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                inputTextBox.setText(line.strip())
+                SaveResult()
 
 app = QApplication(sys.argv)
 window = QWidget()
@@ -117,39 +131,44 @@ layout = QVBoxLayout()
 inputLabel = QLabel("Enter values in the format: (#, #), (#, #, #)")
 layout.addWidget(inputLabel)
 
+inputLayout = QHBoxLayout()
 inputTextBox = QLineEdit()
-inputTextBox.textChanged.connect(calculate)
-layout.addWidget(inputTextBox)
+inputTextBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+inputTextBox.textChanged.connect(Calculate)
+inputLayout.addWidget(inputTextBox, 5)
 
-# resultLabel1 = QLabel("Equation 1:")
-# layout.addWidget(resultLabel1)
-# resultLabel2 = QLabel("Equation 2:")
-# layout.addWidget(resultLabel2)
-# resultLabel3 = QLabel("Equation 3:")
-# layout.addWidget(resultLabel3)
-# resultLabel4 = QLabel("Equation 4:")
-# layout.addWidget(resultLabel4)
-resultLabel5 = QLabel("Equation 5:")
-layout.addWidget(resultLabel5)
+importButton = QPushButton("Import")
+importButton.clicked.connect(ImportFromFile)
+importButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+inputLayout.addWidget(importButton, 1)
+
+layout.addLayout(inputLayout)
+
+resultLabel = QLabel("Equation:")
+layout.addWidget(resultLabel)
 
 buttonLayout = QHBoxLayout()
 saveButton = QPushButton("Save Result")
-saveButton.clicked.connect(save_result)
+saveButton.clicked.connect(SaveResult)
 buttonLayout.addWidget(saveButton)
 
 clearButton = QPushButton("Clear List")
-clearButton.clicked.connect(clear_results)
+clearButton.clicked.connect(ClearResults)
 buttonLayout.addWidget(clearButton)
 
 layout.addLayout(buttonLayout)
 
+scrollArea = QScrollArea()
+scrollArea.setWidgetResizable(True)
 savedListWidget = QListWidget()
-savedListWidget.itemDoubleClicked.connect(remove_result)
-layout.addWidget(savedListWidget)
+savedListWidget.itemDoubleClicked.connect(RemoveResult)
+scrollArea.setWidget(savedListWidget)
+
+layout.addWidget(scrollArea)
 
 window.setLayout(layout)
 window.setWindowTitle('Probability of Exploitability')
-window.setFixedSize(500, 400)
+window.setFixedSize(500, 800)
 window.show()
 
 sys.exit(app.exec())

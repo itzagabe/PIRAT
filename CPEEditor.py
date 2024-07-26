@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from ImportDevices import cve_scores, tempDeviceList, updateCveScores, getExploitabilityScoreCVETEST
+from ImportDevicesUI import cve_scores, tempDeviceList, updateCveScores, getExploitabilityScoreCVETEST
 
 class CPEEditor(QDialog):
     def __init__(self, devices, parent=None):

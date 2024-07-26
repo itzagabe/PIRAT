@@ -3,8 +3,8 @@ from PySide6.QtCore import Qt
 import sys
 from newUI import setup_ui as SetUpBottom
 from newUI import values as severityValues
-from ImportDevices import setup_ui as SetUpTop
-from ImportDevices import deviceInfoList, getImportValues
+from ImportDevicesUI import setup_ui as SetUpTop
+from ImportDevicesUI import deviceInfoList, getImportValues
 
 class ResultsWindow(QMainWindow):
     def __init__(self, results, parent=None):
