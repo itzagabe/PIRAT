@@ -6,19 +6,58 @@ savedResults = []
 showClearConfirm = True
 showRemoveConfirm = True
 
-def Formula3(parsedDevices):
+def Formula(parsedDevices):
     b_c = 0.0001
     b_d = 0.005
-    c_w = 5
+    c_w = 2
     
-    v3 = []
-    for device in parsedDevices:
-        susceptability_ij = [(exploit / 3.89) ** c_w + b_c for exploit in device]
-        compromise_ij = [math.sqrt(sus / (1 + sus)) for sus in susceptability_ij]
-        compromisei = b_d + (1 - b_d) * (1 - math.prod(1 - comp for comp in compromise_ij))
-        v3.append(compromisei)
-    pVe = 1 - math.prod(1 - v for v in v3)
-    return pVe, pVe * 100
+    overallResilience = 1
+    for device in parsedDevices:  # i...N
+        deviceResilience = 1
+
+        for exploit, impact in device: # j...M
+            if impact == 'n':
+                quantizedExploit = b_c + (1 - b_c) * (0.1 * (exploit / 3.89) ** c_w)
+            elif impact == 'l':
+                quantizedExploit = b_c + (1 - b_c) * (0.3 * (exploit / 3.89) ** c_w)
+            elif impact == 'h':
+                quantizedExploit = b_c + (1 - b_c) * (1.0 * (exploit / 3.89) ** c_w)
+            
+            deviceResilience *= 1 - quantizedExploit
+        
+        deviceCompromise = b_d + (1 - b_d) * (1 - deviceResilience)
+        overallResilience *= 1 - deviceCompromise
+
+    pVe_alt = 1 - overallResilience
+    return pVe_alt, pVe_alt * 100
+
+def Formula2(parsedDevices):
+    b_c = 0.0001
+    b_d = 0.005
+    c_w = 3
+    
+    overallResilience = 1
+    for device in parsedDevices:  # i...N
+        deviceResilience = 1
+
+        for exploit, impact in device: # j...M
+            if impact == 'n':
+                quantizedExploit = b_c + (1 - b_c) * (0.1 * (exploit / 3.89) ** c_w)
+            elif impact == 'l':
+                quantizedExploit = b_c + (1 - b_c) * (0.3 * (exploit / 3.89) ** c_w)
+            elif impact == 'h':
+                if exploit == 3.89:
+                    return 1, 1 * 100
+                quantizedExploit = b_c + (1 - b_c) * (1.0 * (exploit / 3.89) ** c_w)
+            
+            logisticExploit = (quantizedExploit / (1 + quantizedExploit)) ** (1./ 3)
+            deviceResilience *= 1 - quantizedExploit
+        
+        deviceCompromise = b_d + (1 - b_d) * (1 - deviceResilience)
+        overallResilience *= 1 - deviceCompromise
+
+    pVe_alt = 1 - overallResilience
+    return pVe_alt, pVe_alt * 100
 
 def Calculate():
     inputText = inputTextBox.text()
@@ -31,19 +70,27 @@ def Calculate():
         for device in devices:
             parsedDevice = []
             for value in device.split(','):
-                try:
-                    num = float(value.strip())
-                    if num > 3.89:
-                        raise ValueError("All CVE scores must be less than or equal to 3.89.")
-                    parsedDevice.append(num)
-                except ValueError:
-                    if value.strip():
+                value = value.strip()
+                if len(value) > 1 and value[-1] in 'nlh':
+                    try:
+                        num = float(value[:-1])
+                        if num > 3.89:
+                            raise ValueError("All CVE scores must be less than or equal to 3.89.")
+                        impact = value[-1]
+                        parsedDevice.append((num, impact))
+                    except ValueError:
                         raise ValueError("Invalid input")
+                else:
+                    raise ValueError("Invalid format for impact score")
             parsedDevices.append(parsedDevice)
         
-        result3, result3Percentage = Formula3(parsedDevices)
+        result1 = Formula(parsedDevices)
+        result2 = Formula2(parsedDevices)
 
-        resultLabel.setText(f"Formula 3: {result3:.3f} / {result3Percentage:.2f}%")
+        resultLabel.setText(
+            f"Formula 1: {result1[0]:.3f} / {result1[1]:.2f}%\n"
+            #f"Formula 2: {result2[0]:.3f} / {result2[1]:.2f}%"
+        )
 
     except ValueError as e:
         resultLabel.setText(f"Error: {str(e)}")
@@ -51,8 +98,7 @@ def Calculate():
 def SaveResult():
     inputText = inputTextBox.text()
     if inputText:
-        resultLines = resultLabel.text().split('\n')
-        resultText = f"{resultLines[0].split(': ')[1]}"
+        resultText = resultLabel.text()
         savedResults.append(f"Input: {inputText}\nOutput: {resultText}\n")
         
         item = QListWidgetItem(f"Input: {inputText}\nOutput: {resultText}\n")
@@ -128,7 +174,7 @@ app = QApplication(sys.argv)
 window = QWidget()
 layout = QVBoxLayout()
 
-inputLabel = QLabel("Enter values in the format: (#, #), (#, #, #)")
+inputLabel = QLabel("Enter values in the format: (#<impact>), (#<impact>, #<impact>) \nn = None, l = Low, h = High      i.e. 3.5h = 3.5 exploitability score, high impact")
 layout.addWidget(inputLabel)
 
 inputLayout = QHBoxLayout()

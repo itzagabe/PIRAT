@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor, QIcon
-from NewLogicGroup import searchPLCInfoNVD
+from nvd import searchPLCInfoNVD
 from nvd import getExploitabilityScoreCVE, getConfidentialityImpactCVE
 import math
 
@@ -536,10 +536,13 @@ def getImportValues():
         #print(f'ADFESF CPE {cpe}, CVE {cve}, EXPLOIT: {getExploitabilityScoreCVETEST(cve)}')
         cpe, cves = device
         #print(cve.metrics['cvssMetricV31'][0]['exploitabilityScore'])
+
         # Step 1: Normalize CVE Severities
-        severity_ij = [min(1,(cve.metrics['cvssMetricV31'][0]['exploitabilityScore'] + baseline_severity) / 3.89) for cve in cves]
-        #severity_ij = [min(1,(getExploitabilityScoreCVETEST(cve) + baseline_severity) / 3.89) for cve in cves]
-        
+        #######################-------------------######@!#@#%#$YGERGHE%RY
+        #severity_ij = [min(1,(cve.metrics['cvssMetricV31'][0]['exploitabilityScore'] + baseline_severity) / 3.89) for cve in cves]
+        severity_ij = [min(1,(getExploitabilityScoreCVETEST(cve) + baseline_severity) / 3.89) for cve in cves]
+        #######################-------------------######@!#@#%#$YGERGHE%RY
+
         # Step 2: Calculate Adjusted Severity Sum with Diminishing Returns
         severity_i = math.sqrt(sum(severity_ij))
         
