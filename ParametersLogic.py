@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt
 def ButtonGroup(severityList):
     buttonGroup = QButtonGroup()
     buttonLayout = QHBoxLayout()
-    buttonLayout.setSpacing(0)  # No spaces between severity buttons
+    buttonLayout.setSpacing(0)
 
     for i, (label, value, colour) in enumerate(severityList):
         button = QPushButton(label)

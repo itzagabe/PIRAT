@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QFrame, QSizePolicy, QToolButton, QLabel
 )
 from PySide6.QtCore import Qt
-from ImpactLogic import *
+from ParametersLogic import *
 
 low = "#90EE90"  # Low
 medium = "#ffd68b"  # Medium

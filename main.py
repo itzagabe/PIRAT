@@ -2,8 +2,8 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayou
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
 import sys
-from ImpactUI import setupTopRight, setupImpact, updateTimeDifference
-from ImpactUI import values
+from ParametersUI import setupTopRight, setupImpact, updateTimeDifference
+from ParametersUI import values
 from ImportDevicesUI import setupImportDevices, getImportValues
 
 #results_window = None
@@ -181,17 +181,17 @@ def create_main_window():
     main_layout.addLayout(button_text_layout)
 
     ################################################################################################################################
-    ###TEMP
-    from CPEEditor import CPEEditor
-    from ImportDevicesUI import tempDeviceList
-    edit_cpe_button = QPushButton(" CPE Edit ")
-    edit_cpe_button.setFixedHeight(30)
-    edit_cpe_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    edit_cpe_button.setToolTip("This button opens the CPE editor.")
-    edit_cpe_button.clicked.connect(lambda: CPEEditor(tempDeviceList).exec())
-    edit_cpe_button.setStyleSheet("background-color: #C0C0C0; color: white; border-radius: 3px;")
-    button_text_layout.addWidget(edit_cpe_button, 0.5)
-    ###TEMP
+    # ###TEMP
+    # from CPEEditor import CPEEditor
+    # from ImportDevicesUI import tempDeviceList
+    # edit_cpe_button = QPushButton(" CPE Edit ")
+    # edit_cpe_button.setFixedHeight(30)
+    # edit_cpe_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    # edit_cpe_button.setToolTip("This button opens the CPE editor.")
+    # edit_cpe_button.clicked.connect(lambda: CPEEditor(tempDeviceList).exec())
+    # edit_cpe_button.setStyleSheet("background-color: #C0C0C0; color: white; border-radius: 3px;")
+    # button_text_layout.addWidget(edit_cpe_button, 0.5)
+    # ###TEMP
     ################################################################################################################################
     container.setLayout(main_layout)
     window.setCentralWidget(container)

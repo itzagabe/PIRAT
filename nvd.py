@@ -129,26 +129,6 @@ def showNotFoundDevicesPopup(notFoundDevices, refineSearchDevices):
 
     dialog.exec()
 
-
-#name = input ("PLC product name ")
-#cveList = nvdlib.searchCVE(keyword=name, limit=10)
-#for eachCVE in cveList:
-#   print (eachCVE.v3severity + " score:" + str(eachCVE.impact) + "\ndescription: " + str(eachCVE.cve.description.description_data[0].value) + "\n\n")
-
-#riskScore = 0
-
-#for eachCve in cveList:
-#    if eachCve.impact.baseMetricV3.cvssV3.baseScore > 8:
-#        riskScore = 10
-#        break
-#    elif eachCve.impact.baseMetricV3.cvssV3.baseScore > 6:
-#        riskScore = 8
-#       break
-
-#print ("Risk score for this PLC is: " + str(riskScore))
-
-# Find a way to pretty print this data
-# Find a way to efficiently search for.
 delay = 2
 
 def searchNVDCPE(model):

@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QFrame, QSizePolicy, QToolButton, QLabel, QSlider, QSpinBox, QComboBox, QSpacerItem
 )
 from PySide6.QtCore import Qt
-from ImpactLogic import *
+from ParametersLogic import *
 
 low = "#90EE90"  # Low
 medium = "#ffd68b"  # Medium
@@ -142,9 +142,10 @@ def ImpactCategories():
 
 def DataCategories():
     severityList = [("Low", 1, low), ("Medium", 2, medium), ("High", 3, high)]
+    categoryList = ['Data Rate', 'Publishers']
     tooltips = {"Data Rate": "Impact based on data rate", "Publishers": "Impact based on number of publishers"}
 
-    return CreateGenericLayout(severityList, ['Data Rate', 'Publishers'], 1, UpdateDataLayout, "#90EE90", tooltips, True)
+    return CreateGenericLayout(severityList, categoryList, 1, UpdateDataLayout, "#90EE90", tooltips, True)
 
 def PolicyCategories():
     severityList = [("None", defaultPolicyRating, "#bababa"), ("Low", 0.4, low), ("Medium", 0.6, medium), ("High", 0.9, high)] # CHANGED None and High
