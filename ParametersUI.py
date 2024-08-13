@@ -4,7 +4,8 @@ from PySide6.QtWidgets import (
     QFrame, QSizePolicy, QToolButton, QLabel, QSlider, QSpinBox, QComboBox, QSpacerItem
 )
 from PySide6.QtCore import Qt
-from ParametersLogic import *
+from ParametersLogic import DisplayResults, CreateLayout, MapDataCategories
+from SharedFunctions import InterpolateColour, CreateResultButtonWidget
 
 low = "#90EE90"  # Low
 medium = "#ffd68b"  # Medium
@@ -34,16 +35,6 @@ def CreateGenericLayout(severityList, categoryList, numButtonGroups, updateFunc,
         returnValue = DisplayResults(buttonGroups, activeItems)
         updateFunc(returnValue, resultButton)
 
-    def CreateResultButtonWidget():
-        resultButton = QPushButton("")
-        resultButton.setEnabled(False)
-        resultButton.setStyleSheet(f"border-radius: 3px; color: black; background-color: {defaultColor};")
-        resultButton.setFixedHeight(20)
-        resultButton.setFixedWidth(230)
-        resultButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        resultButton.setToolTip("This button shows the calculated severity value.")
-        return resultButton
-
     def ConnectButtons(buttonGroups, activeItems, resultButton, uiFrame):
         for buttonGroupDict in buttonGroups:
             for buttonGroup in buttonGroupDict.values():
@@ -66,7 +57,7 @@ def CreateGenericLayout(severityList, categoryList, numButtonGroups, updateFunc,
     SetTooltips(uiFrame, tooltips)
 
     if createResultButton:
-        resultButton = CreateResultButtonWidget()
+        resultButton = CreateResultButtonWidget(defaultColor)
         UpdateButton(buttonGroups, activeItems, resultButton)
         ConnectButtons(buttonGroups, activeItems, resultButton, uiFrame)
         uiLayout.addWidget(resultButton, alignment=Qt.AlignTop | Qt.AlignHCenter)

@@ -1,6 +1,7 @@
 import sys
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QButtonGroup, QToolButton, QFrame
 from PySide6.QtCore import Qt
+from SharedFunctions import InterpolateColour
 
 def ButtonGroup(severityList):
     buttonGroup = QButtonGroup()
@@ -228,15 +229,3 @@ def MapDataCategories(returnValue):
     result = chart[publishersIndex][dataRateIndex]
     
     return result
-
-def InterpolateColour(startColour, endColour, factor):
-    startColour = startColour.lstrip('#')
-    endColour = endColour.lstrip('#')
-    sr, sg, sb = int(startColour[0:2], 16), int(startColour[2:4], 16), int(startColour[4:6], 16)
-    er, eg, eb = int(endColour[0:2], 16), int(endColour[2:4], 16), int(endColour[4:6], 16)
-    
-    r = int(sr + (er - sr) * factor)
-    g = int(sg + (eg - sg) * factor)
-    b = int(sb + (eb - sb) * factor)
-    
-    return f'#{r:02x}{g:02x}{b:02x}'
