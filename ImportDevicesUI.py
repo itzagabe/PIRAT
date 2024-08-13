@@ -64,8 +64,12 @@ def handle_search(source, results_list, device_name_edit=None):
             results_list.addItem(item)
             results_to_device_map[idx] = item
 
+        # Automatically calculate values after search
+        getImportValues()
+
     except Exception as e:
         show_error_popup(f"An error occurred during search: {e}")
+
 
 
 def handle_group_file_load(path_box):
@@ -102,7 +106,34 @@ def showCVEPopup(item, results_list):
         for i in range(len(deviceInfoList[idx][1])):
             if deviceInfoList[idx][1][i][0][0] == cve_id:
                 deviceInfoList[idx][1][i] = (deviceInfoList[idx][1][i][0], checked)
-                        
+                break
+        # Recalculate immediately after toggling CVE status
+        getImportValues()
+        update_device_compromise_label()
+
+    def calculate_device_compromise():
+        deviceResilience = 1
+        b_d = 0.005
+        c_w = 2
+        for (cve_info, status) in cves:
+            if status:  # Only consider active CVEs
+                exploit = cve_info[1]
+                impact = cve_info[2]
+                
+                if impact == 'NONE':
+                    quantizedExploit = 0.1 * (exploit / 3.89) ** c_w
+                elif impact == 'LOW':
+                    quantizedExploit = 0.3 * (exploit / 3.89) ** c_w
+                elif impact == 'HIGH':
+                    quantizedExploit = 1.0 * (exploit / 3.89) ** c_w
+                
+                deviceResilience *= 1 - quantizedExploit
+        return b_d + (1 - b_d) * (1 - deviceResilience)
+
+    def update_device_compromise_label():
+        device_compromise = calculate_device_compromise()
+        compromise_label.setText(f"Device Compromise: {device_compromise:.4f}")
+
     def remove_device():
         reply = QMessageBox.question(
             None, 'Remove Device',
@@ -118,6 +149,8 @@ def showCVEPopup(item, results_list):
             for i in range(len(deviceInfoList)):
                 results_to_device_map[i] = results_list.item(i)
             dialog.accept()
+            # Recalculate after device removal
+            getImportValues()
 
     app = QApplication.instance() or QApplication([])
 
@@ -127,9 +160,12 @@ def showCVEPopup(item, results_list):
     layout = QVBoxLayout()
     dialog.setLayout(layout)
 
+    compromise_label = QLabel()  # Label to display deviceCompromise
+    layout.addWidget(compromise_label)
+    update_device_compromise_label()
+
     for (cve_info, active) in cves:
         cve_id, exploitability_score, confidentiality_impact = cve_info
-        #checkbox = QCheckBox(f"{cve_id}")
         checkbox = QCheckBox(f"{cve_id} (Exploitability: {exploitability_score}, Confidentiality: {confidentiality_impact})")
         checkbox.setChecked(active)
         checkbox.toggled.connect(lambda checked, cve_id=cve_id: toggleCVE(idx, cve_id, checked))
@@ -148,6 +184,8 @@ def showCVEPopup(item, results_list):
     layout.addLayout(button_layout)
 
     dialog.exec()
+
+
 
 def create_bottom_layout():
     bottom_layout = QHBoxLayout()
@@ -253,7 +291,7 @@ def handle_add_device(results_list):
         cve_id_edit.setPlaceholderText("Enter CVE ID")
         
         severity_spinbox = QDoubleSpinBox()  # Use QDoubleSpinBox for decimals
-        severity_spinbox.setRange(0.0, 3.9)  # Set range from 0 to 3.89
+        severity_spinbox.setRange(0.0, 3.89)  # Set range from 0 to 3.89
         severity_spinbox.setSingleStep(0.01)  # Set the increment step to 0.01
 
         impact_combobox = QComboBox()
@@ -304,10 +342,14 @@ def handle_add_device(results_list):
         
         dialog.accept()
 
+        # Recalculate after adding a new device
+        getImportValues()
+
     save_button.clicked.connect(save_device)
     cancel_button.clicked.connect(dialog.reject)
 
     dialog.exec()
+
 
 def create_manual_layout(results_list):
     manual_layout = QVBoxLayout()
@@ -321,13 +363,6 @@ def create_manual_layout(results_list):
     manual_layout.addWidget(search_button)
 
     return manual_layout
-
-def setupImportDevices(container):
-    frame = QFrame(container)
-    frame.setFrameShape(QFrame.Box)
-    frame.setLineWidth(1)
-    
-    main_layout = QVBoxLayout(frame)
 
 def clear_devices(results_list):
     reply = QMessageBox.question(
@@ -388,7 +423,6 @@ def setupImportDevices(container):
 
     def switch_view(index):
         stacked_layout.setCurrentIndex(index)
-        #search_button.setEnabled(dropdown.currentText() != "Manual")
 
     dropdown.currentIndexChanged.connect(switch_view)
     main_layout.addLayout(stacked_layout)
@@ -396,12 +430,18 @@ def setupImportDevices(container):
     main_layout.addLayout(create_bottom_layout())
     main_layout.addWidget(results_list)
 
+    # Clear Devices button and pVe_alt label
     clear_devices_button = QPushButton("Clear Devices")
     clear_devices_button.clicked.connect(lambda: clear_devices(results_list))
     main_layout.addWidget(clear_devices_button)
 
+    global pve_alt_label
+    pve_alt_label = QLabel("pVe_alt: 0.0000")
+    main_layout.addWidget(pve_alt_label)  # Add pVe_alt label below the Clear Devices button
+
     container.setLayout(QVBoxLayout())
     container.layout().addWidget(frame)
+
 
 def show_help_window(selection):
     help_text = {
@@ -467,15 +507,12 @@ def show_help_window(selection):
     dialog.exec()
 
 def getImportValues():
-    
     if not deviceInfoList:
         print('No devices found')
         return 0, False
 
-
     # Initialize lists for active and inactive CVEs in the desired format
     activeDeviceInfoList = []
-    print(activeDeviceInfoList)
     for cpe, cves in deviceInfoList:
         active_cves = [(cve_info, status) for cve_info, status in cves if status]
         activeDeviceInfoList.append((cpe, active_cves))
@@ -499,13 +536,15 @@ def getImportValues():
                 quantizedExploit = 1.0 * (exploit / 3.9) ** c_w
             
             deviceResilience *= 1 - quantizedExploit
-            #print(f'Resilience = {deviceResilience}')
         
         deviceCompromise = b_d + (1 - b_d) * (1 - deviceResilience)
-        #print(f'Compromise = {deviceCompromise}')
         overallResilience *= 1 - deviceCompromise
 
     pVe_alt = 1 - overallResilience
-    #print(pVe_alt)
+    update_pve_alt_label(pVe_alt)  # Update the label with the new pVe_alt value
 
     return pVe_alt, True
+
+def update_pve_alt_label(pVe_alt):
+    global pve_alt_label
+    pve_alt_label.setText(f"pVe_alt: {pVe_alt:.4f}")
