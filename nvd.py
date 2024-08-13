@@ -10,7 +10,8 @@ from PySide6.QtCore import Qt
 officialCPE = []
 notFoundDevices = []
 refineSearchDevices = []
-timeoutTimer = 3
+timeoutTimer = 5
+delay = 3 #DELAY TIMER, 2 = lowest, may end up getting blocked from NVD if too many calls
 
 def searchPLCInfoNVD(searchTermList, refinedSearch = True):
     global officialCPE, notFoundDevices, refineSearchDevices, timeoutTimer
@@ -129,8 +130,6 @@ def showNotFoundDevicesPopup(notFoundDevices, refineSearchDevices):
 
     dialog.exec()
 
-delay = 2
-
 def searchNVDCPE(model):
     print(f"searching {model}")
     try:
@@ -178,7 +177,7 @@ def getAvailabilityImpactCVE(cveItem):
         
 def getConfidentialityImpactCVE(cveItem):
     try:
-        return cveItem.metrics.cvssMetricV31[0].confidentialityImpact
+        return cveItem.metrics.cvssMetricV31[0].cvssData.confidentialityImpact
     except AttributeError:
         try:
             return cveItem.metrics.cvssMetricV30[0].confidentialityImpact

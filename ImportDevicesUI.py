@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLineEdit, QPushButton,
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLineEdit, QPushButton, QDoubleSpinBox,
     QLabel, QCheckBox, QListWidget, QFileDialog, QStyle, QStackedLayout, QMessageBox, QDialog, QFrame, QListWidgetItem, QFormLayout, QSpinBox, QToolButton
 )
 from PySide6.QtCore import Qt
@@ -27,6 +27,7 @@ def show_error_popup(message):
 
 def handle_search(source, results_list, device_name_edit=None):
     global search_terms, deviceInfoList, results_to_device_map
+
     if source == "Individual":
         device_name = device_name_edit.text().strip() if device_name_edit else ""
         if not device_name:
@@ -34,28 +35,38 @@ def handle_search(source, results_list, device_name_edit=None):
             return
         search_terms.clear()
         search_terms.append((device_name, 1))
-    
+
     try:
         # Perform search with the current search terms
-        new_device_info_list = searchPLCInfoNVD(search_terms, detailed_search)  # Pass the list of search terms with counts
-        new_device_info_list = [(cpe, cves) for cpe, cves in new_device_info_list]
+        new_device_info_list = searchPLCInfoNVD(search_terms, detailed_search)
 
-        # Append new devices to the existing list after the search
-        start_idx = len(deviceInfoList)
-        deviceInfoList.extend(new_device_info_list)
+        # Modify the structure to store CVE information with status
+        updated_device_info_list = []
+        for cpe, cves in new_device_info_list:
+            updated_cves = []
+            for cve, status in cves:
+                confidentiality_impact = getConfidentialityImpactCVE(cve)
+                if confidentiality_impact not in ['NONE', 'LOW', 'HIGH']:
+                    confidentiality_impact = 'NONE'  # Default to NONE if the value is not valid
 
-        # Clear the results list before populating it with past and new devices
+                cve_info = [cve.id, getExploitabilityScoreCVE(cve), confidentiality_impact]
+                updated_cves.append((cve_info, status))
+            updated_device_info_list.append((cpe, updated_cves))
+
+        # Append new devices to the existing list
+        deviceInfoList.extend(updated_device_info_list)
+
+        # Clear and repopulate the results list
         results_list.clear()
         results_to_device_map.clear()
-
-        # Populate the results list with both past and new devices
-        for idx in range(len(deviceInfoList)):
-            cpe, _ = deviceInfoList[idx]
+        for idx, (cpe, _) in enumerate(deviceInfoList):
             item = QListWidgetItem(cpe)
             results_list.addItem(item)
             results_to_device_map[idx] = item
+
     except Exception as e:
         show_error_popup(f"An error occurred during search: {e}")
+
 
 def handle_group_file_load(path_box):
     file_dialog = QFileDialog()
@@ -87,10 +98,10 @@ def showCVEPopup(item, results_list):
     idx = results_list.row(item)
     cpe, cves = deviceInfoList[idx]
     
-    def toggleCVE(idx, cve, checked):
+    def toggleCVE(idx, cve_id, checked):
         for i in range(len(deviceInfoList[idx][1])):
-            if deviceInfoList[idx][1][i][0] == cve:
-                deviceInfoList[idx][1][i] = (cve, checked)
+            if deviceInfoList[idx][1][i][0][0] == cve_id:
+                deviceInfoList[idx][1][i] = (deviceInfoList[idx][1][i][0], checked)
                         
     def remove_device():
         reply = QMessageBox.question(
@@ -116,21 +127,21 @@ def showCVEPopup(item, results_list):
     layout = QVBoxLayout()
     dialog.setLayout(layout)
 
-    for cve, active in cves:
-        checkbox = QCheckBox(cve.id)
+    for (cve_info, active) in cves:
+        cve_id, exploitability_score, confidentiality_impact = cve_info
+        #checkbox = QCheckBox(f"{cve_id}")
+        checkbox = QCheckBox(f"{cve_id} (Exploitability: {exploitability_score}, Confidentiality: {confidentiality_impact})")
         checkbox.setChecked(active)
-        checkbox.toggled.connect(lambda checked, cve=cve: toggleCVE(idx, cve, checked))
+        checkbox.toggled.connect(lambda checked, cve_id=cve_id: toggleCVE(idx, cve_id, checked))
         layout.addWidget(checkbox)
 
     button_layout = QHBoxLayout()
     
     remove_button = QPushButton("Remove")
-    #remove_button.setStyleSheet("background-color: #FF6347; border: none; color: white;")
     remove_button.clicked.connect(remove_device)
     button_layout.addWidget(remove_button)
     
     close_button = QPushButton("Close")
-    #close_button.setStyleSheet("background-color: #ADD8E6; border: none; color: white;")
     close_button.clicked.connect(dialog.accept)
     button_layout.addWidget(close_button)
     
@@ -219,6 +230,7 @@ def handle_add_device(results_list):
 
     dialog = QDialog()
     dialog.setWindowTitle("Add Device")
+    dialog.setFixedWidth(500)  # Set a fixed width for the dialog
 
     layout = QVBoxLayout()
     dialog.setLayout(layout)
@@ -239,25 +251,23 @@ def handle_add_device(results_list):
         form_layout = QHBoxLayout()
         cve_id_edit = QLineEdit()
         cve_id_edit.setPlaceholderText("Enter CVE ID")
-        severity_spinbox = QSpinBox()
-        severity_spinbox.setRange(0, 10)
-        severity_spinbox.setSingleStep(1)
-        remove_button = QToolButton()
-        remove_button.setText("Remove")
+        
+        severity_spinbox = QDoubleSpinBox()  # Use QDoubleSpinBox for decimals
+        severity_spinbox.setRange(0.0, 3.9)  # Set range from 0 to 3.89
+        severity_spinbox.setSingleStep(0.01)  # Set the increment step to 0.01
+
+        impact_combobox = QComboBox()
+        impact_combobox.addItems(['NONE', 'LOW', 'HIGH'])
+
         form_layout.addWidget(QLabel("CVE ID:"))
         form_layout.addWidget(cve_id_edit)
-        form_layout.addWidget(QLabel("Severity Score:"))
+        form_layout.addWidget(QLabel("Exploitability:"))
         form_layout.addWidget(severity_spinbox)
-        form_layout.addWidget(remove_button)
+        form_layout.addWidget(QLabel("Impact:"))
+        form_layout.addWidget(impact_combobox)
         
         cve_list_layout.addLayout(form_layout)
-        cve_entries.append((form_layout, cve_id_edit, severity_spinbox, remove_button))
-
-        def remove_cve_entry():
-            cve_entries.remove((form_layout, cve_id_edit, severity_spinbox, remove_button))
-            form_layout.deleteLater()
-
-        remove_button.clicked.connect(remove_cve_entry)
+        cve_entries.append((cve_id_edit, severity_spinbox, impact_combobox))
 
     add_cve_button.clicked.connect(add_cve_entry)
     layout.addLayout(cve_list_layout)
@@ -277,13 +287,16 @@ def handle_add_device(results_list):
             return
 
         cve_list = []
-        for _, cve_id_edit, severity_spinbox, _ in cve_entries:
+        for cve_id_edit, severity_spinbox, impact_combobox in cve_entries:
             cve_id = cve_id_edit.text().strip()
             severity = severity_spinbox.value()
-            if cve_id or severity != 0:
-                cve_list.append(CVE(cve_id, severity))
+            impact = impact_combobox.currentText()
+            if cve_id:
+                cve_info = [cve_id, severity, impact]
+                status = True  # Default status to True (checked)
+                cve_list.append((cve_info, status))
 
-        deviceInfoList.append((cpe_name, [(cve, cve.metrics["cvssMetricV31"][0]["exploitabilityScore"]) for cve in cve_list]))
+        deviceInfoList.append((cpe_name, cve_list))
         
         item = QListWidgetItem(cpe_name)
         results_list.addItem(item)
@@ -295,15 +308,6 @@ def handle_add_device(results_list):
     cancel_button.clicked.connect(dialog.reject)
 
     dialog.exec()
-
-class CVE:
-    def __init__(self, cve_id, exploitability_score):
-        self.id = cve_id
-        self.metrics = {
-            "cvssMetricV31": [
-                {"exploitabilityScore": exploitability_score}
-            ]
-        }
 
 def create_manual_layout(results_list):
     manual_layout = QVBoxLayout()
@@ -317,7 +321,6 @@ def create_manual_layout(results_list):
     manual_layout.addWidget(search_button)
 
     return manual_layout
-
 
 def setupImportDevices(container):
     frame = QFrame(container)
@@ -463,152 +466,46 @@ def show_help_window(selection):
 
     dialog.exec()
 
-def getImportValues2():
-    if not deviceInfoList:
-        return 0, False
-    # Initialize lists for active and inactive CVEs in the desired format
-    active_cves_list = []
-    inactive_cves_list = []
-
-    # Iterate through the deviceInfoList
-    for cpe, cves in deviceInfoList:
-        active_cves = []
-        inactive_cves = []
-        for cve, active in cves:
-            if active:
-                active_cves.append(cve)
-            else:
-                inactive_cves.append(cve)
-        
-        if active_cves:
-            active_cves_list.append((cpe, active_cves))
-        if inactive_cves:
-            inactive_cves_list.append((cpe, inactive_cves))
-
-    # Calculate the number of CPEs, active CVEs, and inactive CVEs
-    num_cpes = len(deviceInfoList)
-
-    averageProbability = 0
-    for cpe, probability in ProbabilityExploitability(active_cves_list):
-    #for cpe in ProbabilityExploitability(tempCVELIST):
-        averageProbability += probability
-        #print(probability)
-    averageProbability = averageProbability / num_cpes
-    k = 5
-    overallProbability = (averageProbability - (num_cpes - 1) / (k - 1)) + (num_cpes - 1) / (k - 1)
-    print(f'Overall Probability = {averageProbability}\n')
-    return overallProbability, True
-    #return f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}", deviceInfoList
-
 def getImportValues():
     
-
-    #UNCOMMENT#############################################################################################
     if not deviceInfoList:
+        print('No devices found')
         return 0, False
-    #############################################################################################TEMP
+
 
     # Initialize lists for active and inactive CVEs in the desired format
-    active_cves_list = []
-    inactive_cves_list = []
-
-    # Iterate through the deviceInfoList
+    activeDeviceInfoList = []
+    print(activeDeviceInfoList)
     for cpe, cves in deviceInfoList:
-        active_cves = []
-        inactive_cves = []
-        for cve, active in cves:
-            if active:
-                active_cves.append(cve)
-            else:
-                inactive_cves.append(cve)
+        active_cves = [(cve_info, status) for cve_info, status in cves if status]
+        activeDeviceInfoList.append((cpe, active_cves))
+
+    b_d = 0.005
+    c_w = 2
+    
+    overallResilience = 1
+    for cpe, cves in activeDeviceInfoList:  # i...N
+        deviceResilience = 1
+
+        for (cve_info, _) in cves:  # j...M
+            exploit = cve_info[1]
+            impact = cve_info[2]
+            
+            if impact == 'NONE':
+                quantizedExploit = 0.1 * (exploit / 3.9) ** c_w
+            elif impact == 'LOW':
+                quantizedExploit = 0.3 * (exploit / 3.9) ** c_w
+            elif impact == 'HIGH':
+                quantizedExploit = 1.0 * (exploit / 3.9) ** c_w
+            
+            deviceResilience *= 1 - quantizedExploit
+            #print(f'Resilience = {deviceResilience}')
         
-        if active_cves:
-            active_cves_list.append((cpe, active_cves))
-        if inactive_cves:
-            inactive_cves_list.append((cpe, inactive_cves))
+        deviceCompromise = b_d + (1 - b_d) * (1 - deviceResilience)
+        #print(f'Compromise = {deviceCompromise}')
+        overallResilience *= 1 - deviceCompromise
 
-    baseline_severity = 0.1
-    baseline_device = 0.05
-    
-    vulnerability = []
-    
-    for device in active_cves_list: ## CHANGE TO active_cves_list/tempDeviceList #############################################################################################
-        #print(f'ADFESF CPE {cpe}, CVE {cve}, EXPLOIT: {getExploitabilityScoreCVETEST(cve)}')
-        cpe, cves = device
-        #print(cve.metrics['cvssMetricV31'][0]['exploitabilityScore'])
+    pVe_alt = 1 - overallResilience
+    #print(pVe_alt)
 
-        # Step 1: Normalize CVE Severities
-        #######################-------------------######@!#@#%#$YGERGHE%RY
-        #severity_ij = [min(1,(cve.metrics['cvssMetricV31'][0]['exploitabilityScore'] + baseline_severity) / 3.89) for cve in cves]
-        severity_ij = [min(1,(getExploitabilityScoreCVETEST(cve) + baseline_severity) / 3.89) for cve in cves]
-        #######################-------------------######@!#@#%#$YGERGHE%RY
-
-        # Step 2: Calculate Adjusted Severity Sum with Diminishing Returns
-        severity_i = math.sqrt(sum(severity_ij))
-        
-        # Step 3: Apply Logistic Function to Device Vulnerability Score
-        vulnerability_i = severity_i / (1 + severity_i)
-        vulnerability.append(vulnerability_i)
-    
-    # Step 4: Calculate Device Contribution
-    compromise_i = [min(1, v + baseline_device) for v in vulnerability]
-    
-    # Step 5: Calculate Overall Group Compromise Probability
-    overallProbability = 1 - math.prod(1 - c for c in compromise_i)
-    print(f'Probability: {overallProbability}')
-
-    return overallProbability, True
-    #return f"# of CPEs: {num_cpes}, # of active CVEs: {num_active_cves}, # of inactive CVEs: {num_inactive_cves}", deviceInfoList
-
-###########################################################################################
-## TEST ###################################################################################
-###########################################################################################
-cve_scores = {
-    "cve1": 3.89,
-    "cve2": 1.0,
-    "cve3": 1.0,
-}
-
-def getExploitabilityScoreCVETEST(cve):
-    return cve_scores.get(cve, 0)
-
-def updateCveScores(new_scores):
-    global cve_scores
-    cve_scores = new_scores
-
-tempDeviceList = [
-    ("cpe1", ["cve1", "cve2"]),
-    ("cpe2", ["cve3"])
-]
-
-###########################################################################################
-## TEST ###################################################################################
-###########################################################################################
-
-
-def Confidentiality(cveList):
-    for cpe, cves in cveList:
-        print(cpe)
-
-        for cve in cves:
-            print(getConfidentialityImpactCVE(cve))
-
-def ProbabilityExploitability(cveList):
-    probabilities = []
-
-    for cpe, cves in cveList:
-        #print(cpe, cve)
-        overallScore = 0
-        maxScore = 0
-        for cve in cves:
-            explotability = (getExploitabilityScoreCVE(cve) / 3.9)
-            overallScore += explotability
-            maxScore = max(maxScore, explotability)
-        
-        if len(cves) > 0:
-            probability = (0.9 * maxScore) + (0.1 * (overallScore / len(cves)))
-        else:
-            probability = 0
-        probabilities.append((cpe, probability))
-
-    return probabilities
+    return pVe_alt, True

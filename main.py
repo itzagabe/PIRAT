@@ -67,18 +67,24 @@ def ShowResults():
 
         return ", ".join(result)
 
-    print(f'Probability software: {deviceProbability}\nProcedure Probability: {values.policy}\nTransmission Impact: {values.data}\nImportance Impact: {values.impact}')
+    print(f'Probability software: {deviceProbability} Procedure Probability: {values.policy}') 
     
     if isNotEmpty:
         probability = (1 - deviceProbability) * values.policy
+        print(f"Total Probability = {probability}")
     else:
         probability = values.policy
-  
+        print(f"Total Probability (no devices)= {probability}")
+    
+    if probability == 0: #POSSIBLY TEMP, formula is kinda ruined if probability = 1
+        probability = 0.01
+
+    print(f'Data Impact: {values.data} Importance Impact: {values.impact}')
+    if values.impact == 0:
+        values.impact = 0.01
     impact = (1 - values.impact * values.data)
-
-    print(f'Total Probability: {probability}')
     print(f'Total Impact: {impact}')
-
+    
     finalRisk = probability * impact
     timeRange1, timeRange2 = updateTimeDifference()
 
@@ -180,19 +186,6 @@ def create_main_window():
     # Add the horizontal layout to the main layout
     main_layout.addLayout(button_text_layout)
 
-    ################################################################################################################################
-    # ###TEMP
-    # from CPEEditor import CPEEditor
-    # from ImportDevicesUI import tempDeviceList
-    # edit_cpe_button = QPushButton(" CPE Edit ")
-    # edit_cpe_button.setFixedHeight(30)
-    # edit_cpe_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    # edit_cpe_button.setToolTip("This button opens the CPE editor.")
-    # edit_cpe_button.clicked.connect(lambda: CPEEditor(tempDeviceList).exec())
-    # edit_cpe_button.setStyleSheet("background-color: #C0C0C0; color: white; border-radius: 3px;")
-    # button_text_layout.addWidget(edit_cpe_button, 0.5)
-    # ###TEMP
-    ################################################################################################################################
     container.setLayout(main_layout)
     window.setCentralWidget(container)
     #window.setGeometry(100, 50, 800, 600)  # Set the window position higher
