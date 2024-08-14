@@ -12,12 +12,12 @@ medium = "#ffd68b"  # Medium
 high = "#f09d9d"  # High
 critical = "#e47676"  # High
 
-defaultPolicyRating = 0.2 # change this for default policy rating
+defaultPolicyRating = 0 # change this for default policy rating
 
 class Values:
     impact = 0
     data = 0.1
-    policy = 0.2
+    policy = defaultPolicyRating
 
 values = Values()
 
@@ -112,7 +112,7 @@ def UpdateDataLayout(returnValue, resultButton):
     values.data = severityValue
     
 def UpdatePolicyLayout(returnValue, resultButton):
-    values.policy = returnValue[0][3]
+    values.policy = 1 - returnValue[0][3] # inverse as smaller number = less risk
 
 def ImpactCategories():
     severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high), ("Critical", 2, critical)]

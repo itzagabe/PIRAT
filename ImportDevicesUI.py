@@ -120,11 +120,11 @@ def showCVEPopup(item, results_list):
                 impact = cve_info[2]
 
                 if impact == 'NONE':
-                    quantizedExploit = 0.1 * (exploit / 3.89) ** c_w
+                    quantizedExploit = 0.1 * (exploit / 3.9) ** c_w
                 elif impact == 'LOW':
-                    quantizedExploit = 0.3 * (exploit / 3.89) ** c_w
+                    quantizedExploit = 0.3 * (exploit / 3.9) ** c_w
                 elif impact == 'HIGH':
-                    quantizedExploit = 1.0 * (exploit / 3.89) ** c_w
+                    quantizedExploit = 1.0 * (exploit / 3.9) ** c_w
 
                 deviceResilience *= 1 - quantizedExploit
         return b_d + (1 - b_d) * (1 - deviceResilience)
@@ -290,7 +290,7 @@ def handle_add_device(results_list):
         cve_id_edit.setPlaceholderText("Enter CVE ID")
         
         severity_spinbox = QDoubleSpinBox()  # Use QDoubleSpinBox for decimals
-        severity_spinbox.setRange(0.0, 3.89)  # Set range from 0 to 3.89
+        severity_spinbox.setRange(0.0, 3.9)  # Set range from 0 to 3.9
         severity_spinbox.setSingleStep(0.01)  # Set the increment step to 0.01
 
         impact_combobox = QComboBox()
@@ -466,6 +466,14 @@ def show_help_window(selection):
 3. After a successful search, the <i>Imported Devices</i> dropdown will be populated with the found device. Double click the entry to modify its CVEs.<br>
 &nbsp;&nbsp;&nbsp;&nbsp;a. By default, all CVEs less than 10 years old are enabled.<br>
 &nbsp;&nbsp;&nbsp;&nbsp;b. Unchecking CVE checkboxes assumes the device has been "patched" and removes it from the final calculation.
+        """,
+        "Manual": """
+Use this if you want to manually create devices and CVEs. This section is mainly for testing or if the NVD API is down, using either an individual or group search is <b>highly recommended</b>.<br><br>
+
+1. Create a device by clicking the <i>Add Device</i> button. This will bring you to a window where you can name your CPE (i.e., device). The name you give it will be displayed in the <i>Imported Devices</i> list once saved.<br><br>
+2. Add CVEs to your device by clicking <i>Add CVE</i>. This will prompt you with a CVE ID, Exploitability score, and Impact.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;a. The CVE ID is displayed when clicking on the device in the <i>Imported Devices</i> list.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;b. Exploitability score and Impact directly affect the final cryptoperiod calculation. Exploitability must be between the bounds [0, 3.9].
         """
     }
 
@@ -478,7 +486,12 @@ def show_help_window(selection):
     dialog.setLayout(layout)
 
     # Title
-    title = "Individual Search" if selection == "Individual" else "Group Search"
+    if selection == "Individual":
+        title = "Individual Search"
+    elif selection == "Group":
+        title = "Group Search"
+    else:
+        title = "Manual Entry"
     title_label = QLabel(title)
     title_label.setAlignment(Qt.AlignCenter)
     layout.addWidget(title_label)
@@ -506,6 +519,7 @@ def show_help_window(selection):
     dialog.exec()
 
 def getImportValues():
+    
     if not deviceInfoList:
         print('No devices found')
         return 0, False
@@ -527,25 +541,25 @@ def getImportValues():
             impact = cve_info[2]
 
             if impact == 'NONE':
-                quantizedExploit = 0.1 * (exploit / 3.89) ** c_w
+                quantizedExploit = 0.1 * (exploit / 3.9) ** c_w
             elif impact == 'LOW':
-                quantizedExploit = 0.3 * (exploit / 3.89) ** c_w
+                quantizedExploit = 0.3 * (exploit / 3.9) ** c_w
             elif impact == 'HIGH':
-                quantizedExploit = 1.0 * (exploit / 3.89) ** c_w
+                quantizedExploit = 1.0 * (exploit / 3.9) ** c_w
 
             deviceResilience *= 1 - quantizedExploit
 
         deviceCompromise = b_d + (1 - b_d) * (1 - deviceResilience)
         overallResilience *= 1 - deviceCompromise
 
-    pVe_alt = 1 - overallResilience
-    update_pve_alt_button(pVe_alt)  # Update the button with the new pVe_alt value
+    totalCompromise = 1 - overallResilience
+    update_pve_alt_button(totalCompromise)  # Update the button with the new pVe_alt value
 
-    return pVe_alt, True
+    return totalCompromise, True
 
 def update_pve_alt_button(pVe_alt):
-    global pve_alt_button
-    UpdateResultButton(pve_alt_button, pVe_alt, "Probability of Software Compromise")
+    global totalCompromiseDisplay
+    UpdateResultButton(totalCompromiseDisplay, pVe_alt, "Probability of Software Compromise")
 
 def setupImportDevices(container):
     frame = QFrame(container)
@@ -604,9 +618,9 @@ def setupImportDevices(container):
     clear_devices_button.clicked.connect(lambda: [clear_devices(results_list), getImportValues()])
     main_layout.addWidget(clear_devices_button)
 
-    global pve_alt_button
-    pve_alt_button = CreateResultButtonWidget("#bababa")
-    main_layout.addWidget(pve_alt_button, alignment=Qt.AlignCenter)  # Add pVe_alt button below the Clear Devices button
+    global totalCompromiseDisplay
+    totalCompromiseDisplay = CreateResultButtonWidget("#bababa")
+    main_layout.addWidget(totalCompromiseDisplay, alignment=Qt.AlignCenter)  # Add pVe_alt button below the Clear Devices button
 
     container.setLayout(QVBoxLayout())
     container.layout().addWidget(frame)

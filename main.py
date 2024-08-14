@@ -70,7 +70,7 @@ def ShowResults():
     print(f'Probability software: {deviceProbability} Procedure Probability: {values.policy}') 
     
     if isNotEmpty:
-        probability = (1 - deviceProbability) * values.policy
+        probability = deviceProbability * values.policy
         print(f"Total Probability = {probability}")
     else:
         probability = values.policy
@@ -80,15 +80,17 @@ def ShowResults():
         probability = 0.01
 
     print(f'Data Impact: {values.data} Importance Impact: {values.impact}')
-    if values.impact == 0:
-        values.impact = 0.01
-    impact = (1 - values.impact * values.data)
+    # if values.impact == 0:
+    #     values.impact = 0.01
+    impact = values.impact * values.data
     print(f'Total Impact: {impact}')
     
     finalRisk = probability * impact
+    print(f"Final Risk: {finalRisk}\n")
+    
     timeRange1, timeRange2 = updateTimeDifference()
 
-    cryptoperiod = timeRange1 + (finalRisk * (timeRange2 - timeRange1))
+    cryptoperiod = timeRange1 + (1 - finalRisk) * (timeRange2 - timeRange1)
     cryptoperiod_display = displayTimeDifference(cryptoperiod)
 
     if results_text_box:
