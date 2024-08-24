@@ -76,7 +76,7 @@ def ShowResults():
         probability = values.policy
         print(f"Total Probability (no devices)= {probability}")
     
-    if probability == 0: #POSSIBLY TEMP, formula is kinda ruined if probability = 1
+    if probability == 0: #POSSIBLY TEMP, formula is kinda ruined if probability = 0 
         probability = 0.01
 
     print(f'Data Impact: {values.data} Importance Impact: {values.impact}')
@@ -85,13 +85,21 @@ def ShowResults():
     impact = values.impact * values.data
     print(f'Total Impact: {impact}')
     
-    finalRisk = probability * impact
+    weight = 1 - (deviceProbability ** (1/3))
+    weight2 = 1 - (values.impact ** (1/3))
+    #weight2 = ( (1 - values.impact) / 2) + ( (1 - deviceProbability) / 2)
+    weight2 = (1 - values.impact)
+    finalRisk = (deviceProbability * values.policy**weight * values.data * values.impact)
+    finalRisk2 = (deviceProbability * values.policy**weight * values.data**weight2 * values.impact)
+
     print(f"Final Risk: {finalRisk}\n")
     
     timeRange1, timeRange2 = updateTimeDifference()
 
     cryptoperiod = timeRange1 + (1 - finalRisk) * (timeRange2 - timeRange1)
-    cryptoperiod_display = displayTimeDifference(cryptoperiod)
+    cryptoperiod2 = timeRange1 * (timeRange2 / timeRange1)**(1-finalRisk2)
+    cryptoperiod_display = "[OLD] " + displayTimeDifference(cryptoperiod)
+    cryptoperiod_display += "      [NEW] " + displayTimeDifference(cryptoperiod2)
 
     if results_text_box:
         results_text_box.setText(f"Recommended cryptoperiod: {cryptoperiod_display}")
