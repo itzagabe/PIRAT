@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 import sys
 from ParametersUI import setupTopRight, setupImpact, updateTimeDifference
 from ParametersUI import values
-from ImportDevicesUI import setupImportDevices, getImportValues
+from ImportDevicesUI import setupImportDevices, GetImportValues
 
 #results_window = None
 results_text_box = None
@@ -37,38 +37,44 @@ def EmptyImport(variable):
         return reply == QMessageBox.Yes
     return True
 
+def displayTimeDifference(hours):
+    months = hours // (30 * 24)
+    hours %= (30 * 24)
+    days = hours // 24
+    hours %= 24
+    minutes = (hours - int(hours)) * 60
+    hours = int(hours)
+
+    months = int(months)
+    days = int(days)
+    hours = int(hours)
+    minutes = int(minutes)
+
+    result = []
+    if months > 0:
+        result.append(f"{months} month{'s' if months != 1 else ''}")
+    if days > 0 or (months > 0 and (hours > 0 or minutes > 0)):
+        result.append(f"{days} day{'s' if days != 1 else ''}")
+    if hours > 0 or (days > 0 or months > 0) and minutes > 0:
+        result.append(f"{hours} hour{'s' if hours != 1 else ''}")
+    if minutes > 0 or hours > 0 or days > 0 or months > 0:
+        result.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+
+    return ", ".join(result)
+
 def ShowResults():
-    deviceProbability, isNotEmpty = getImportValues()
-    if not EmptyImport(isNotEmpty):
+    deviceProbability, isNotEmpty = GetImportValues()
+
+    if not EmptyImport(isNotEmpty): # Create warning pop-up if no devices are present
         return
         
-    def displayTimeDifference(hours):
-        months = hours // (30 * 24)
-        hours %= (30 * 24)
-        days = hours // 24
-        hours %= 24
-        minutes = (hours - int(hours)) * 60
-        hours = int(hours)
-
-        months = int(months)
-        days = int(days)
-        hours = int(hours)
-        minutes = int(minutes)
-
-        result = []
-        if months > 0:
-            result.append(f"{months} month{'s' if months != 1 else ''}")
-        if days > 0 or (months > 0 and (hours > 0 or minutes > 0)):
-            result.append(f"{days} day{'s' if days != 1 else ''}")
-        if hours > 0 or (days > 0 or months > 0) and minutes > 0:
-            result.append(f"{hours} hour{'s' if hours != 1 else ''}")
-        if minutes > 0 or hours > 0 or days > 0 or months > 0:
-            result.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
-
-        return ", ".join(result)
+    timeRange1, timeRange2 = updateTimeDifference()
 
     print(f'Probability software: {deviceProbability} Procedure Probability: {values.policy}') 
     
+    if deviceProbability == 0: #if no devices, assume worst case scenario
+      deviceProbability = 1
+
     if isNotEmpty:
         probability = deviceProbability * values.policy
         print(f"Total Probability = {probability}")
@@ -76,8 +82,7 @@ def ShowResults():
         probability = values.policy
         print(f"Total Probability (no devices)= {probability}")
     
-    if probability == 0: #POSSIBLY TEMP, formula is kinda ruined if probability = 0 
-        probability = 0.01
+
 
     print(f'Data Impact: {values.data} Importance Impact: {values.impact}')
     # if values.impact == 0:
@@ -87,22 +92,29 @@ def ShowResults():
     
     weight = 1 - (deviceProbability ** (1/3))
     weight2 = 1 - (values.impact ** (1/3))
-    #weight2 = ( (1 - values.impact) / 2) + ( (1 - deviceProbability) / 2)
-    weight2 = (1 - values.impact)
-    finalRisk = (deviceProbability * values.policy**weight * values.data * values.impact)
-    finalRisk2 = (deviceProbability * values.policy**weight * values.data**weight2 * values.impact)
 
+    _weight = 1 - (deviceProbability)
+    _weight2 = 1 - (values.impact)
+
+    newWeight = 1 - (0.5 * values.impact)
+
+    finalRisk = (deviceProbability * values.policy**weight * values.data**weight2 * values.impact)
+
+    # _finalRisk = (deviceProbability * values.policy**_weight * values.data**_weight2 * values.impact)
+
+    #newfinalrisk = (deviceProbability**newWeight * values.policy**_weight * values.data**_weight2 * values.impact)
     print(f"Final Risk: {finalRisk}\n")
     
-    timeRange1, timeRange2 = updateTimeDifference()
-
-    cryptoperiod = timeRange1 + (1 - finalRisk) * (timeRange2 - timeRange1)
-    cryptoperiod2 = timeRange1 * (timeRange2 / timeRange1)**(1-finalRisk2)
-    cryptoperiod_display = "[OLD] " + displayTimeDifference(cryptoperiod)
-    cryptoperiod_display += "      [NEW] " + displayTimeDifference(cryptoperiod2)
+    cryptoperiod = timeRange1 * (timeRange2 / timeRange1)**(1-finalRisk)
+    # _cryptoperiod = timeRange1 * (timeRange2 / timeRange1)**(1-_finalRisk)
+    #newcryptoperiod = timeRange1 * (timeRange2 / timeRange1)**(1-newfinalrisk)
+    
+    cryptoperiod_display = "Recommended cryptoperiod: " + displayTimeDifference(cryptoperiod)
+    # cryptoperiod_display += "      0.2: " + displayTimeDifference(_cryptoperiod)
+    #cryptoperiod_display += "     new : " + displayTimeDifference(newcryptoperiod)
 
     if results_text_box:
-        results_text_box.setText(f"Recommended cryptoperiod: {cryptoperiod_display}")
+        results_text_box.setText(f" {cryptoperiod_display}")
         print(f"Recommended cryptoperiod: {cryptoperiod_display}\n")
 
 def create_main_window():

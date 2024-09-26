@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLineEdit, QPushButton, QDoubleSpinBox,
-    QLabel, QCheckBox, QListWidget, QFileDialog, QStyle, QStackedLayout, QMessageBox, QDialog, QFrame, QListWidgetItem, QFormLayout, QSpinBox, QToolButton
+    QLabel, QCheckBox, QListWidget, QFileDialog, QStyle, QStackedLayout, QMessageBox, QDialog, QFrame, QListWidgetItem, QScrollArea
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor, QIcon
@@ -64,7 +64,7 @@ def handle_search(source, results_list, device_name_edit=None):
             results_to_device_map[idx] = item
 
         # Automatically calculate values after search
-        getImportValues()
+        GetImportValues()
 
     except Exception as e:
         show_error_popup(f"An error occurred during search: {e}")
@@ -96,6 +96,25 @@ def handle_group_file_load(path_box):
         path_box.setPlaceholderText("File path will be displayed here")
         path_box.setStyleSheet("font-style: italic;")
 
+def calculateResilience(cves, b_d=0.075, c_w=2):
+    deviceResilience = 1
+    for (cve_info, status) in cves:
+        if status:  # Only consider active CVEs
+            exploit = cve_info[1]
+            impact = cve_info[2]
+
+            if impact == 'NONE':
+                quantizedExploit = 0.1 * (exploit / 3.9) ** c_w
+            elif impact == 'LOW':
+                quantizedExploit = 0.3 * (exploit / 3.9) ** c_w
+            elif impact == 'HIGH':
+                quantizedExploit = 1.0 * (exploit / 3.9) ** c_w
+
+            deviceResilience *= 1 - quantizedExploit
+
+    return b_d + (1 - b_d) * (1 - deviceResilience)
+
+
 def showCVEPopup(item, results_list):
     global deviceInfoList, results_to_device_map
     idx = results_list.row(item)
@@ -107,30 +126,11 @@ def showCVEPopup(item, results_list):
                 deviceInfoList[idx][1][i] = (deviceInfoList[idx][1][i][0], checked)
                 break
         # Recalculate immediately after toggling CVE status
-        getImportValues()
+        GetImportValues()
         update_device_compromise_button()
 
-    def calculate_device_compromise():
-        deviceResilience = 1
-        b_d = 0.005
-        c_w = 2
-        for (cve_info, status) in cves:
-            if status:  # Only consider active CVEs
-                exploit = cve_info[1]
-                impact = cve_info[2]
-
-                if impact == 'NONE':
-                    quantizedExploit = 0.1 * (exploit / 3.9) ** c_w
-                elif impact == 'LOW':
-                    quantizedExploit = 0.3 * (exploit / 3.9) ** c_w
-                elif impact == 'HIGH':
-                    quantizedExploit = 1.0 * (exploit / 3.9) ** c_w
-
-                deviceResilience *= 1 - quantizedExploit
-        return b_d + (1 - b_d) * (1 - deviceResilience)
-
     def update_device_compromise_button():
-        device_compromise = calculate_device_compromise()
+        device_compromise = calculateResilience(cves)
         UpdateResultButton(device_compromise_button, device_compromise, "Probability of Compromise")
 
     app = QApplication.instance() or QApplication([])
@@ -151,16 +151,26 @@ def showCVEPopup(item, results_list):
                 results_to_device_map[i] = results_list.item(i)
             dialog.accept()
             # Recalculate after device removal
-            getImportValues()
+            GetImportValues()
 
     dialog = QDialog()
     dialog.setWindowTitle(f"CVEs for {cpe}")
 
-    layout = QVBoxLayout()
-    dialog.setLayout(layout)
+    main_layout = QVBoxLayout(dialog)
+
+    scroll_area = QScrollArea()
+    scroll_area.setWidgetResizable(True)
+    scroll_area.setFrameShape(QScrollArea.NoFrame)  # Remove the bezel around the frame
+    scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Disable horizontal scroll
+    scroll_content = QWidget()
+    scroll_layout = QVBoxLayout(scroll_content)
+    scroll_content.setLayout(scroll_layout)
+
+    scroll_area.setWidget(scroll_content)
+    main_layout.addWidget(scroll_area)
 
     device_compromise_button = CreateResultButtonWidget("#bababa")  # Initial color
-    layout.addWidget(device_compromise_button, alignment=Qt.AlignCenter)
+    scroll_layout.addWidget(device_compromise_button, alignment=Qt.AlignCenter)
     update_device_compromise_button()
 
     for (cve_info, active) in cves:
@@ -168,22 +178,21 @@ def showCVEPopup(item, results_list):
         checkbox = QCheckBox(f"{cve_id} (Exploitability: {exploitability_score}, Confidentiality: {confidentiality_impact})")
         checkbox.setChecked(active)
         checkbox.toggled.connect(lambda checked, cve_id=cve_id: toggleCVE(idx, cve_id, checked))
-        layout.addWidget(checkbox)
+        scroll_layout.addWidget(checkbox)
 
     button_layout = QHBoxLayout()
     
     remove_button = QPushButton("Remove")
-    remove_button.clicked.connect(lambda: [remove_device(), getImportValues()])
+    remove_button.clicked.connect(lambda: [remove_device(), GetImportValues()])
     button_layout.addWidget(remove_button)
     
     close_button = QPushButton("Close")
     close_button.clicked.connect(dialog.accept)
     button_layout.addWidget(close_button)
     
-    layout.addLayout(button_layout)
+    main_layout.addLayout(button_layout)
 
     dialog.exec()
-
 
 
 def create_bottom_layout():
@@ -342,7 +351,7 @@ def handle_add_device(results_list):
         dialog.accept()
 
         # Recalculate after adding a new device
-        getImportValues()
+        GetImportValues()
 
     save_button.clicked.connect(save_device)
     cancel_button.clicked.connect(dialog.reject)
@@ -375,6 +384,7 @@ def clear_devices(results_list):
         deviceInfoList.clear()
         results_to_device_map.clear()
         results_list.clear()
+        update_pve_alt_button(0.00)
 
 def setupImportDevices(container):
     frame = QFrame(container)
@@ -518,8 +528,7 @@ Use this if you want to manually create devices and CVEs. This section is mainly
 
     dialog.exec()
 
-def getImportValues():
-    
+def GetImportValues():
     if not deviceInfoList:
         print('No devices found')
         return 0, False
@@ -529,33 +538,17 @@ def getImportValues():
         active_cves = [(cve_info, status) for cve_info, status in cves if status]
         activeDeviceInfoList.append((cpe, active_cves))
 
-    b_d = 0.005
-    c_w = 2
-    
     overallResilience = 1
     for cpe, cves in activeDeviceInfoList:
-        deviceResilience = 1
-
-        for (cve_info, _) in cves:
-            exploit = cve_info[1]
-            impact = cve_info[2]
-
-            if impact == 'NONE':
-                quantizedExploit = 0.1 * (exploit / 3.9) ** c_w
-            elif impact == 'LOW':
-                quantizedExploit = 0.3 * (exploit / 3.9) ** c_w
-            elif impact == 'HIGH':
-                quantizedExploit = 1.0 * (exploit / 3.9) ** c_w
-
-            deviceResilience *= 1 - quantizedExploit
-
-        deviceCompromise = b_d + (1 - b_d) * (1 - deviceResilience)
+        deviceCompromise = calculateResilience(cves)
+        print(f"\n{deviceCompromise}")
         overallResilience *= 1 - deviceCompromise
 
     totalCompromise = 1 - overallResilience
     update_pve_alt_button(totalCompromise)  # Update the button with the new pVe_alt value
 
     return totalCompromise, True
+
 
 def update_pve_alt_button(pVe_alt):
     global totalCompromiseDisplay
@@ -615,11 +608,12 @@ def setupImportDevices(container):
     main_layout.addWidget(results_list)
 
     clear_devices_button = QPushButton("Clear Devices")
-    clear_devices_button.clicked.connect(lambda: [clear_devices(results_list), getImportValues()])
+    clear_devices_button.clicked.connect(lambda: [clear_devices(results_list), GetImportValues()])
     main_layout.addWidget(clear_devices_button)
 
     global totalCompromiseDisplay
     totalCompromiseDisplay = CreateResultButtonWidget("#bababa")
+    update_pve_alt_button(0.00) #set initial display
     main_layout.addWidget(totalCompromiseDisplay, alignment=Qt.AlignCenter)  # Add pVe_alt button below the Clear Devices button
 
     container.setLayout(QVBoxLayout())

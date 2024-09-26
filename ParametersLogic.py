@@ -203,22 +203,19 @@ def CreateLayout(mainLayout, severityList, categoryList, numButtonGroups):
 
 def MapDataCategories(returnValue):
     severityMap = {"Low": 0, "Medium": 1, "High": 2}
-    
-    dataRateLevel = None
-    publishersLevel = None
 
-    for entry in returnValue:
-        group, category, severity, value = entry
-        if category == "Data Rate":
-            dataRateLevel = severity
-        elif category == "Publishers":
-            publishersLevel = severity
-    
-    if dataRateLevel is None or publishersLevel is None:
+    if len(returnValue) < 2:
         return "Incomplete data"
+
+    # Automatically assign the first and second categories
+    dataRateLevel = returnValue[0][2]
+    publishersLevel = returnValue[1][2]
 
     dataRateIndex = severityMap.get(dataRateLevel)
     publishersIndex = severityMap.get(publishersLevel)
+
+    if dataRateIndex is None or publishersIndex is None:
+        return "Invalid severity level"
 
     chart = [
         [["Very Low", 0.1], ["Low", 0.3], ["Moderate", 0.75]],
@@ -227,5 +224,6 @@ def MapDataCategories(returnValue):
     ]
 
     result = chart[publishersIndex][dataRateIndex]
-    
+
     return result
+

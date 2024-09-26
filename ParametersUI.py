@@ -12,12 +12,12 @@ medium = "#ffd68b"  # Medium
 high = "#f09d9d"  # High
 critical = "#e47676"  # High
 
-defaultPolicyRating = 0 # change this for default policy rating
+defaultPolicyRating = 0 # change this for default policy rating, NOTE the lower the number the "weaker" the policy strength, PVE-proc is 1 - policyRating
 
 class Values:
     impact = 0
     data = 0.1
-    policy = defaultPolicyRating
+    policy = 1 - defaultPolicyRating #do the inverse of the policy rating for initial value
 
 values = Values()
 
@@ -117,16 +117,23 @@ def UpdatePolicyLayout(returnValue, resultButton):
 def ImpactCategories():
     severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high), ("Critical", 2, critical)]
     categoryList = [
-        ("Operational", ["Proprietary", "System"]), ("Safety", []), ("Financial", []),
+        ("Operational", []), ("Safety", []), ("Financial", ["Loss of Revenue", "Proprietary Information", "Legal Fees"]),
         ("Privacy and Legislative", ["Societal Loss", "Regulatory Loss", "Environmental Loss"])
     ]
     tooltips = {
-        "Operational": "Operational impact category", "Proprietary": "Operational - Proprietary subcategory",
-        "System": "Operational - System subcategory", "Safety": "Safety impact category",
-        "Financial": "Financial impact category", "Privacy and Legislative": "Privacy and Legislative impact category",
-        "Societal Loss": "Privacy and Legislative - Societal Loss subcategory",
-        "Regulatory Loss": "Privacy and Legislative - Regulatory Loss subcategory",
-        "Environmental Loss": "Privacy and Legislative - Environmental Loss subcategory"
+        "Operational": "Disruptions caused by adversaries accessing sensitive data within the ICS environment ", 
+
+        "Safety": "Information about safety protocols, emergency response plans, or control settings of safety-critical systems",
+
+        "Financial": "Economic repercussions that result from the compromise of data within an organization",
+        "Loss of Revenue": "Financial setbacks resulting from disruptions to control system operations, devices, and processes",
+        "Proprietary Information": "Financial loss from the compromises of both intellectual property and trade secrets",
+        "Legal Fees": "Cost associated with defending against lawsuits",
+
+        "Privacy and Legislative": "Consequences of adversaries gaining access to sensitive personal information and compliance-related data",
+        "Societal Loss": "Repercussions on communities and public trust, encompassing factors related to public perception",
+        "Regulatory Loss": "Affect an attack can have on the environment",
+        "Environmental Loss": "Losses due to legal and regulatory aspects, including legal penalties and fines"
     }
 
     return CreateGenericLayout(severityList, categoryList, 2, UpdateImpactLayout, "#bababa", tooltips, True)
@@ -134,12 +141,12 @@ def ImpactCategories():
 def DataCategories():
     severityList = [("Low", 1, low), ("Medium", 2, medium), ("High", 3, high)]
     categoryList = ['Data Rate', 'Publishers']
-    tooltips = {"Data Rate": "Impact based on data rate", "Publishers": "Impact based on number of publishers"}
+    tooltips = {"Data Rate": "Impact based on data rate", "Number of Publishers": "Impact based on number of publishers"}
 
     return CreateGenericLayout(severityList, categoryList, 1, UpdateDataLayout, "#90EE90", tooltips, True)
 
 def PolicyCategories():
-    severityList = [("None", defaultPolicyRating, "#bababa"), ("Low", 0.4, low), ("Medium", 0.6, medium), ("High", 0.9, high)] # CHANGED None and High
+    severityList = [("None", defaultPolicyRating, "#bababa"), ("Low", 0.25, low), ("Medium", 0.55, medium), ("High", 0.9, high)] # CHANGED None and High
     tooltips = {"Policy Strength": "How strong are security-related procedural policies and guidelines"}
 
     return CreateGenericLayout(severityList, ['Policy Strength'], 1, UpdatePolicyLayout, "#bababa", tooltips, False)
@@ -238,16 +245,18 @@ def setup_ui(container):
 
 #### I added the slider logic here cause it was easier
 
-def createTimeRangeInput(label_text, update_function):
+def createTimeRangeInput(label_text, update_function, default_value=1, default_unit="hours"):
     timeRangeLayout = QVBoxLayout()
     timeRangeLabel = QLabel(label_text)
     timeRangeLabel.setAlignment(Qt.AlignLeft)
     timeRangeInputLayout = QHBoxLayout()
     timeRangeSpinBox = QSpinBox()
     timeRangeSpinBox.setRange(1, 1000)
+    timeRangeSpinBox.setValue(default_value)  # Set default spinbox value
     timeRangeSpinBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
     timeRangeComboBox = QComboBox()
     timeRangeComboBox.addItems(["hours", "days", "months"])
+    timeRangeComboBox.setCurrentText(default_unit)  # Set default combobox value
     timeRangeComboBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
     timeRangeSpinBox.valueChanged.connect(lambda value: update_function(value, timeRangeComboBox.currentText()))
     timeRangeComboBox.currentTextChanged.connect(lambda unit: update_function(timeRangeSpinBox.value(), unit))
@@ -255,6 +264,9 @@ def createTimeRangeInput(label_text, update_function):
     timeRangeInputLayout.addWidget(timeRangeComboBox, 2)
     timeRangeLayout.addWidget(timeRangeLabel)
     timeRangeLayout.addLayout(timeRangeInputLayout)
+
+    update_function(default_value, default_unit)
+    
     return timeRangeLayout
 
 def setupTopRight(container):
@@ -270,9 +282,8 @@ def setupTopRight(container):
     timeLabel.setAlignment(Qt.AlignLeft)
     leftLayout.addWidget(timeLabel)
 
-    timeRange1Layout = createTimeRangeInput("Minimum:", updateTimeRange1)
-    timeRange2Layout = createTimeRangeInput("Maximum:", updateTimeRange2)
-
+    timeRange1Layout = createTimeRangeInput("Minimum:", updateTimeRange1, default_value=1, default_unit="days")  # Set default to 1 day
+    timeRange2Layout = createTimeRangeInput("Maximum:", updateTimeRange2, default_value=12, default_unit="months")  # Set default to 12 months
     timeRangesLayout = QHBoxLayout()
     timeRangesLayout.addLayout(timeRange1Layout)
     timeRangesLayout.addLayout(timeRange2Layout)
