@@ -74,7 +74,7 @@ def chooseWhichCPE(cpeList, cpeTerm, idx, listLength, count):
 
     dialog = QDialog()
     dialog.setWindowTitle(f"Choose CPE for \"{cpeTerm}\" ({idx + 1} / {listLength}) - {count} devices")
-    dialog.setMinimumWidth(1500)
+    dialog.setMinimumWidth(1000)
 
     layout = QVBoxLayout()
     dialog.setLayout(layout)

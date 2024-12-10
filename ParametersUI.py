@@ -141,7 +141,7 @@ def ImpactCategories():
 def DataCategories():
     severityList = [("Low", 1, low), ("Medium", 2, medium), ("High", 3, high)]
     categoryList = ['Data Rate', 'Publishers']
-    tooltips = {"Data Rate": "Impact based on data rate", "Number of Publishers": "Impact based on number of publishers"}
+    tooltips = {"Data Rate": "Average amount of data sent per publisher", "Publishers": "Number of publishers in the environment"}
 
     return CreateGenericLayout(severityList, categoryList, 1, UpdateDataLayout, "#90EE90", tooltips, True)
 
@@ -360,21 +360,21 @@ def setupImpact(container):
     labelLayout = QHBoxLayout()
 
     # Spacer item to the left of Importance label with a fixed width
-    spacer_before_importance = QSpacerItem(290, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
+    spacer_before_importance = QSpacerItem(215, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
     labelLayout.addItem(spacer_before_importance)
 
     # Importance label
-    importanceLabel = QLabel("Importance")
-    importanceLabel.setToolTip("Temp")
+    importanceLabel = QLabel("Functional Impact on Different Functions")
+    importanceLabel.setToolTip("Impact extent [Data Siphoning] on each organizational function")
     labelLayout.addWidget(importanceLabel)
 
     # Spacer item to the left of Extent label with a fixed width
-    spacer_before_extent = QSpacerItem(135, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
+    spacer_before_extent = QSpacerItem(75, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
     labelLayout.addItem(spacer_before_extent)
 
     # Extent label
-    extentLabel = QLabel("Extent")
-    extentLabel.setToolTip("Temp2")
+    extentLabel = QLabel("Criticality on Different Functions")
+    extentLabel.setToolTip("Importance of each organizational function on company's overall performance")
     labelLayout.addWidget(extentLabel)
 
     # Add the label layout to the right layout

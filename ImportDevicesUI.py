@@ -188,6 +188,7 @@ def showCVEPopup(item, results_list):
     
     close_button = QPushButton("Close")
     close_button.clicked.connect(dialog.accept)
+    close_button.setDefault(True)
     button_layout.addWidget(close_button)
     
     main_layout.addLayout(button_layout)
@@ -243,7 +244,7 @@ def create_group_layout(container, results_list):
     import_file_button.setIcon(container.style().standardIcon(QStyle.SP_DirOpenIcon))
     import_file_button.setFixedSize(20, 20)  # Adjusted size
     group_textbox = QLineEdit()
-    group_textbox.setReadOnly(True)
+    group_textbox.setEnabled(False)
     group_textbox.setPlaceholderText("File path will be displayed here")
     group_textbox.setStyleSheet("font-style: italic;")
     import_file_button.clicked.connect(lambda: handle_group_file_load(group_textbox))
@@ -326,18 +327,33 @@ def handle_add_device(results_list):
 
     layout.addLayout(button_layout)
 
+    def show_error_popup(message):
+        error_popup = QMessageBox()
+        error_popup.setIcon(QMessageBox.Critical)
+        error_popup.setWindowTitle("Error")
+        error_popup.setText(message)
+        error_popup.exec()
+
     def save_device():
         cpe_name = cpe_name_edit.text().strip()
         if not cpe_name:
             show_error_popup("Please enter a CPE name.")
             return
-
+        
         cve_list = []
+        cve_ids = set()  # Keep track of unique CVE IDs
+
         for cve_id_edit, severity_spinbox, impact_combobox in cve_entries:
             cve_id = cve_id_edit.text().strip()
             severity = severity_spinbox.value()
             impact = impact_combobox.currentText()
+            
             if cve_id:
+                if cve_id in cve_ids:
+                    show_error_popup("Please ensure CVE IDs have unique names.")
+                    return
+                cve_ids.add(cve_id)
+
                 cve_info = [cve_id, severity, impact]
                 status = True  # Default status to True (checked)
                 cve_list.append((cve_info, status))
@@ -357,6 +373,7 @@ def handle_add_device(results_list):
     cancel_button.clicked.connect(dialog.reject)
 
     dialog.exec()
+
 
 
 def create_manual_layout(results_list):
@@ -521,7 +538,7 @@ Use this if you want to manually create devices and CVEs. This section is mainly
     layout.addWidget(help_label)
 
     close_button = QPushButton("Close")
-    close_button.setStyleSheet("background-color: #ADD8E6; border: none; color: white;")
+    ##close_button.setStyleSheet("background-color: #ADD8E6; border: none; color: white;")
     layout.addWidget(close_button)
 
     close_button.clicked.connect(dialog.accept)
@@ -541,7 +558,6 @@ def GetImportValues():
     overallResilience = 1
     for cpe, cves in activeDeviceInfoList:
         deviceCompromise = calculateResilience(cves)
-        print(f"\n{deviceCompromise}")
         overallResilience *= 1 - deviceCompromise
 
     totalCompromise = 1 - overallResilience

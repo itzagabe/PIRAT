@@ -37,6 +37,21 @@ def EmptyImport(variable):
         return reply == QMessageBox.Yes
     return True
 
+def showCryptoperiodWarning():
+    # Create a message box
+    msg_box = QMessageBox()
+    
+    # Set the icon and message for the warning
+    msg_box.setIcon(QMessageBox.Warning)
+    msg_box.setWindowTitle("Error")
+    msg_box.setText("Minimum cryptoperiod time must be smaller than the maximum cryptoperiod time.")
+    
+    # Set the OK button
+    msg_box.setStandardButtons(QMessageBox.Ok)
+    
+    # Execute the message box and wait for user response
+    msg_box.exec()
+
 def displayTimeDifference(hours):
     months = hours // (30 * 24)
     hours %= (30 * 24)
@@ -63,12 +78,17 @@ def displayTimeDifference(hours):
     return ", ".join(result)
 
 def ShowResults():
-    deviceProbability, isNotEmpty = GetImportValues()
 
+    deviceProbability, isNotEmpty = GetImportValues()
+    timeRange1, timeRange2 = updateTimeDifference()
+
+    if timeRange1 > timeRange2:
+        showCryptoperiodWarning()
+        return
+    
     if not EmptyImport(isNotEmpty): # Create warning pop-up if no devices are present
         return
         
-    timeRange1, timeRange2 = updateTimeDifference()
 
     print(f'Probability software: {deviceProbability} Procedure Probability: {values.policy}') 
     
@@ -85,33 +105,17 @@ def ShowResults():
 
 
     print(f'Data Impact: {values.data} Importance Impact: {values.impact}')
-    # if values.impact == 0:
-    #     values.impact = 0.01
     impact = values.impact * values.data
     print(f'Total Impact: {impact}')
     
     weight = 1 - (deviceProbability ** (1/3))
     weight2 = 1 - (values.impact ** (1/3))
-
-    _weight = 1 - (deviceProbability)
-    _weight2 = 1 - (values.impact)
-
-    newWeight = 1 - (0.5 * values.impact)
-
     finalRisk = (deviceProbability * values.policy**weight * values.data**weight2 * values.impact)
 
-    # _finalRisk = (deviceProbability * values.policy**_weight * values.data**_weight2 * values.impact)
-
-    #newfinalrisk = (deviceProbability**newWeight * values.policy**_weight * values.data**_weight2 * values.impact)
     print(f"Final Risk: {finalRisk}\n")
     
     cryptoperiod = timeRange1 * (timeRange2 / timeRange1)**(1-finalRisk)
-    # _cryptoperiod = timeRange1 * (timeRange2 / timeRange1)**(1-_finalRisk)
-    #newcryptoperiod = timeRange1 * (timeRange2 / timeRange1)**(1-newfinalrisk)
-    
     cryptoperiod_display = "Recommended cryptoperiod: " + displayTimeDifference(cryptoperiod)
-    # cryptoperiod_display += "      0.2: " + displayTimeDifference(_cryptoperiod)
-    #cryptoperiod_display += "     new : " + displayTimeDifference(newcryptoperiod)
 
     if results_text_box:
         results_text_box.setText(f" {cryptoperiod_display}")
