@@ -88,34 +88,24 @@ def ShowResults():
     
     if not EmptyImport(isNotEmpty): # Create warning pop-up if no devices are present
         return
-        
-
-    print(f'Probability software: {deviceProbability} Procedure Probability: {values.policy}') 
-    
+            
     if deviceProbability == 0: #if no devices, assume worst case scenario
       deviceProbability = 1
 
-    if isNotEmpty:
-        probability = deviceProbability * values.policy
-        print(f"Total Probability = {probability}")
-    else:
-        probability = values.policy
-        print(f"Total Probability (no devices)= {probability}")
-    
+    probability = 1 - ((1 - deviceProbability)*(1 - values.policy))
+    print(f'Software Probability: {deviceProbability}   Procedure Probability: {values.policy}\nTOTAL PROBABILITY: {probability}') 
 
+    weight = 1 - (values.impact ** (1/3))
+    impact = values.impact * values.data**weight
+    print(f'Information Rate: {values.data}   Functional Importance: {values.impact}\nTOTAL IMPACT: {impact}')
 
-    print(f'Data Impact: {values.data} Importance Impact: {values.impact}')
-    impact = values.impact * values.data
-    print(f'Total Impact: {impact}')
     
-    weight = 1 - (deviceProbability ** (1/3))
-    weight2 = 1 - (values.impact ** (1/3))
-    finalRisk = (deviceProbability * values.policy**weight * values.data**weight2 * values.impact)
+    finalRisk = (probability * impact)
 
     print(f"Final Risk: {finalRisk}\n")
     
     cryptoperiod = timeRange1 * (timeRange2 / timeRange1)**(1-finalRisk)
-    cryptoperiod_display = "Recommended cryptoperiod: " + displayTimeDifference(cryptoperiod)
+    cryptoperiod_display = "Old: " + displayTimeDifference(cryptoperiod)
 
     if results_text_box:
         results_text_box.setText(f" {cryptoperiod_display}")

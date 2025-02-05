@@ -96,7 +96,7 @@ def handle_group_file_load(path_box):
         path_box.setPlaceholderText("File path will be displayed here")
         path_box.setStyleSheet("font-style: italic;")
 
-def calculateResilience(cves, b_d=0.075, c_w=2):
+def calculateResilience(cves, b_d=0.03, c_w=2):
     deviceResilience = 1
     for (cve_info, status) in cves:
         if status:  # Only consider active CVEs

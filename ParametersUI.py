@@ -12,12 +12,12 @@ medium = "#ffd68b"  # Medium
 high = "#f09d9d"  # High
 critical = "#e47676"  # High
 
-defaultPolicyRating = 0 # change this for default policy rating, NOTE the lower the number the "weaker" the policy strength, PVE-proc is 1 - policyRating
+#defaultPolicyRating = 0 # change this for default policy rating, NOTE the lower the number the "weaker" the policy strength, PVE-proc is 1 - policyRating
 
 class Values:
     impact = 0
     data = 0.1
-    policy = 1 - defaultPolicyRating #do the inverse of the policy rating for initial value
+    policy = 1 #do the inverse of the policy rating for initial value
 
 values = Values()
 
@@ -112,13 +112,13 @@ def UpdateDataLayout(returnValue, resultButton):
     values.data = severityValue
     
 def UpdatePolicyLayout(returnValue, resultButton):
-    values.policy = 1 - returnValue[0][3] # inverse as smaller number = less risk
+    values.policy = returnValue[0][3] # inverse as smaller number = less risk
 
 def ImpactCategories():
     severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high), ("Critical", 2, critical)]
     categoryList = [
-        ("Operational", []), ("Safety", []), ("Financial", ["Loss of Revenue", "Proprietary Information", "Legal Fees"]),
-        ("Privacy and Legislative", ["Societal Loss", "Regulatory Loss", "Environmental Loss"])
+        ("Operational", []), ("Safety", []), ("Financial", []),
+        ("Privacy and Legislative", [])
     ]
     tooltips = {
         "Operational": "Disruptions caused by adversaries accessing sensitive data within the ICS environment ", 
@@ -126,17 +126,35 @@ def ImpactCategories():
         "Safety": "Information about safety protocols, emergency response plans, or control settings of safety-critical systems",
 
         "Financial": "Economic repercussions that result from the compromise of data within an organization",
-        "Loss of Revenue": "Financial setbacks resulting from disruptions to control system operations, devices, and processes",
-        "Proprietary Information": "Financial loss from the compromises of both intellectual property and trade secrets",
-        "Legal Fees": "Cost associated with defending against lawsuits",
 
         "Privacy and Legislative": "Consequences of adversaries gaining access to sensitive personal information and compliance-related data",
-        "Societal Loss": "Repercussions on communities and public trust, encompassing factors related to public perception",
-        "Regulatory Loss": "Affect an attack can have on the environment",
-        "Environmental Loss": "Losses due to legal and regulatory aspects, including legal penalties and fines"
+
     }
 
     return CreateGenericLayout(severityList, categoryList, 2, UpdateImpactLayout, "#bababa", tooltips, True)
+# def ImpactCategories():
+#     severityList = [("None", 0, "#bababa"), ("Low", 0.3, low), ("Medium", 0.6, medium), ("High", 1, high), ("Critical", 2, critical)]
+#     categoryList = [
+#         ("Operational", []), ("Safety", []), ("Financial", ["Loss of Revenue", "Proprietary Information", "Legal Fees"]),
+#         ("Privacy and Legislative", ["Societal Loss", "Regulatory Loss", "Environmental Loss"])
+#     ]
+#     tooltips = {
+#         "Operational": "Disruptions caused by adversaries accessing sensitive data within the ICS environment ", 
+
+#         "Safety": "Information about safety protocols, emergency response plans, or control settings of safety-critical systems",
+
+#         "Financial": "Economic repercussions that result from the compromise of data within an organization",
+#         "Loss of Revenue": "Financial setbacks resulting from disruptions to control system operations, devices, and processes",
+#         "Proprietary Information": "Financial loss from the compromises of both intellectual property and trade secrets",
+#         "Legal Fees": "Cost associated with defending against lawsuits",
+
+#         "Privacy and Legislative": "Consequences of adversaries gaining access to sensitive personal information and compliance-related data",
+#         "Societal Loss": "Repercussions on communities and public trust, encompassing factors related to public perception",
+#         "Regulatory Loss": "Affect an attack can have on the environment",
+#         "Environmental Loss": "Losses due to legal and regulatory aspects, including legal penalties and fines"
+#     }
+
+#     return CreateGenericLayout(severityList, categoryList, 2, UpdateImpactLayout, "#bababa", tooltips, True)
 
 def DataCategories():
     severityList = [("Low", 1, low), ("Medium", 2, medium), ("High", 3, high)]
@@ -146,7 +164,7 @@ def DataCategories():
     return CreateGenericLayout(severityList, categoryList, 1, UpdateDataLayout, "#90EE90", tooltips, True)
 
 def PolicyCategories():
-    severityList = [("None", defaultPolicyRating, "#bababa"), ("Low", 0.25, low), ("Medium", 0.55, medium), ("High", 0.9, high)] # CHANGED None and High
+    severityList = [("None", 1, "#bababa"), ("Low", 0.75, low), ("Medium", 0.45, medium), ("High", 0.1, high)] # CHANGED None and High
     tooltips = {"Policy Strength": "How strong are security-related procedural policies and guidelines"}
 
     return CreateGenericLayout(severityList, ['Policy Strength'], 1, UpdatePolicyLayout, "#bababa", tooltips, False)
